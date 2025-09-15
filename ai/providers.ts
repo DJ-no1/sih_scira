@@ -1,11 +1,25 @@
 import { wrapLanguageModel, customProvider, extractReasoningMiddleware, simulateStreamingMiddleware } from 'ai';
+import { httpAgent, httpsAgent } from '@/lib/socket-config';
 
 import { openai, createOpenAI } from '@ai-sdk/openai';
 import { xai } from '@ai-sdk/xai';
 import { groq } from '@ai-sdk/groq';
 import { anthropic } from '@ai-sdk/anthropic';
-import { google } from '@ai-sdk/google';
+import { google, createGoogleGenerativeAI } from '@ai-sdk/google';
 import { mistral } from '@ai-sdk/mistral';
+
+const googleProvider = createGoogleGenerativeAI({
+  apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+  // Note: Google provider doesn't support timeout in constructor
+  fetch: (url, options = {}) => {
+    return fetch(url, {
+      ...options,
+      signal: AbortSignal.timeout(380000), // 6.3 minutes timeout for Google requests
+      // @ts-ignore - Node.js fetch may not support agent in all environments
+      agent: url.toString().startsWith('https:') ? httpsAgent : httpAgent,
+    });
+  },
+});
 
 const middleware = extractReasoningMiddleware({
   tagName: 'think',
@@ -16,11 +30,19 @@ const simmiddleware = simulateStreamingMiddleware();
 const huggingface = createOpenAI({
   baseURL: 'https://router.huggingface.co/v1',
   apiKey: process.env.HF_TOKEN,
+  fetch: (url, options = {}) => {
+    return fetch(url, {
+      ...options,
+      signal: AbortSignal.timeout(380000), // 6.3 minutes timeout for HuggingFace requests
+      // @ts-ignore - Node.js fetch may not support agent in all environments
+      agent: url.toString().startsWith('https:') ? httpsAgent : httpAgent,
+    });
+  },
 });
 
 export const scira = customProvider({
   languageModels: {
-    'scira-default': xai('grok-3-mini'),
+    'scira-default': googleProvider('gemini-2.5-flash'), // Changed to free Gemini model
     'scira-nano': groq('llama-3.3-70b-versatile'),
     'scira-name': huggingface.chat('meta-llama/Llama-3.3-70B-Instruct:cerebras'),
     'scira-grok-3': xai('grok-3-fast'),
@@ -62,8 +84,12 @@ export const scira = customProvider({
     'scira-kimi-k2': groq('moonshotai/kimi-k2-instruct'),
     'scira-haiku': anthropic('claude-3-5-haiku-20241022'),
     'scira-mistral-medium': mistral('mistral-medium-2508'),
-    'scira-google': google('gemini-2.5-flash'),
-    'scira-google-pro': google('gemini-2.5-pro'),
+    'scira-google': googleProvider('gemini-2.5-flash'),
+    'scira-google-pro': googleProvider('gemini-2.5-pro'),
+    'scira-google-flash-lite': googleProvider('gemini-2.5-flash-lite'),
+    'scira-google-flash-exp': googleProvider('gemini-2.5-flash-exp'),
+    'scira-google-thinking': googleProvider('gemini-2.0-flash-thinking-exp'),
+    'scira-google-flash-8b': googleProvider('gemini-1.5-flash-8b'),
     'scira-anthropic': anthropic('claude-sonnet-4-20250514'),
     'scira-llama-4': groq('meta-llama/llama-4-maverick-17b-128e-instruct'),
   },
@@ -85,20 +111,20 @@ interface Model {
 }
 
 export const models: Model[] = [
-  // Models (xAI)
+  // Models (Default - Free Gemini)
   {
     value: 'scira-default',
-    label: 'Grok 3 Mini',
-    description: "xAI's most efficient reasoning LLM.",
-    vision: false,
-    reasoning: true,
+    label: 'Gemini 2.5 Flash',
+    description: "Google's advanced free LLM with vision support",
+    vision: true,
+    reasoning: false,
     experimental: false,
     category: 'Free',
-    pdf: false,
+    pdf: true,
     pro: false,
     requiresAuth: false,
-    freeUnlimited: false,
-    maxOutputTokens: 16000,
+    freeUnlimited: true,
+    maxOutputTokens: 10000,
   },
   {
     value: 'scira-grok-3',
@@ -388,11 +414,11 @@ export const models: Model[] = [
     vision: true,
     reasoning: false,
     experimental: false,
-    category: 'Pro',
+    category: 'Free',
     pdf: true,
-    pro: true,
-    requiresAuth: true,
-    freeUnlimited: false,
+    pro: false,
+    requiresAuth: false,
+    freeUnlimited: true,
     maxOutputTokens: 10000,
   },
   {
@@ -402,12 +428,68 @@ export const models: Model[] = [
     vision: true,
     reasoning: false,
     experimental: false,
-    category: 'Pro',
+    category: 'Free',
     pdf: true,
-    pro: true,
-    requiresAuth: true,
-    freeUnlimited: false,
+    pro: false,
+    requiresAuth: false,
+    freeUnlimited: true,
     maxOutputTokens: 10000,
+  },
+  {
+    value: 'scira-google-flash-lite',
+    label: 'Gemini 2.5 Flash-Lite',
+    description: "Google's most cost-efficient model optimized for high throughput and low latency",
+    vision: true,
+    reasoning: false,
+    experimental: false,
+    category: 'Free',
+    pdf: true,
+    pro: false,
+    requiresAuth: false,
+    freeUnlimited: true,
+    maxOutputTokens: 8000,
+  },
+  {
+    value: 'scira-google-flash-exp',
+    label: 'Gemini 2.5 Flash Experimental',
+    description: "Google's experimental flash model with latest features",
+    vision: true,
+    reasoning: false,
+    experimental: true,
+    category: 'Free',
+    pdf: true,
+    pro: false,
+    requiresAuth: false,
+    freeUnlimited: true,
+    maxOutputTokens: 10000,
+  },
+  {
+    value: 'scira-google-thinking',
+    label: 'Gemini 2.0 Flash Thinking',
+    description: "Google's reasoning-capable flash model",
+    vision: true,
+    reasoning: true,
+    experimental: true,
+    category: 'Free',
+    pdf: true,
+    pro: false,
+    requiresAuth: false,
+    freeUnlimited: true,
+    maxOutputTokens: 10000,
+  },
+  {
+    value: 'scira-google-flash-8b',
+    label: 'Gemini 1.5 Flash 8B',
+    description: "Google's efficient small model",
+    vision: true,
+    reasoning: false,
+    experimental: false,
+    category: 'Free',
+    pdf: true,
+    pro: false,
+    requiresAuth: false,
+    freeUnlimited: true,
+    maxOutputTokens: 8000,
   },
 
   // Experimental Models

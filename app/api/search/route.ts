@@ -1,4 +1,29 @@
 // /app/api/chat/route.ts
+// Import enhanced configurations first to override all defaults
+import '@/lib/enhanced-fetch';
+import '@/lib/socket-config';
+import '@/lib/undici-config';
+
+import http from 'http';
+import https from 'https';
+
+// Configure global HTTP/HTTPS agents with extended timeouts
+const httpAgent = new http.Agent({
+  keepAlive: true,
+  timeout: 300000, // 5 minutes
+  keepAliveMsecs: 30000, // 30 seconds
+});
+
+const httpsAgent = new https.Agent({
+  keepAlive: true,
+  timeout: 300000, // 5 minutes
+  keepAliveMsecs: 30000, // 30 seconds
+});
+
+// Set global defaults
+http.globalAgent = httpAgent;
+https.globalAgent = httpsAgent;
+
 import {
   generateTitleFromUserMessage,
   getGroupConfig,
@@ -134,6 +159,9 @@ const getMaxOutputTokens = (model: string) => {
   return modelConfig?.maxOutputTokens ?? 4000;
 };
 
+// Vercel function timeout configuration
+export const maxDuration = 360; // 6 minutes
+
 export async function POST(req: Request) {
   console.log('🔍 Search API endpoint hit');
 
@@ -171,11 +199,7 @@ export async function POST(req: Request) {
   console.log('Custom Instructions Enabled:', isCustomInstructionsEnabled);
   console.log('--------------------------------');
 
-  // Check if model requires authentication (fast check)
-  const authRequiredModels = models.filter((m) => m.requiresAuth).map((m) => m.value);
-  if (authRequiredModels.includes(model) && !user) {
-    return new ChatSDKError('unauthorized:model', `Authentication required to access ${model}`).toResponse();
-  }
+  // All models are now freely accessible without authentication
 
   // For authenticated users, do critical checks in parallel
   let criticalChecksPromise: Promise<{
@@ -293,9 +317,9 @@ export async function POST(req: Request) {
           isProUser: false,
           subscriptionData: user.polarSubscription
             ? {
-                hasSubscription: true,
-                subscription: { ...user.polarSubscription, organizationId: null },
-              }
+              hasSubscription: true,
+              subscription: { ...user.polarSubscription, organizationId: null },
+            }
             : { hasSubscription: false },
           shouldBypassLimits,
           extremeSearchUsage: extremeSearchUsage.count,
@@ -315,9 +339,9 @@ export async function POST(req: Request) {
         isProUser: true,
         subscriptionData: user.polarSubscription
           ? {
-              hasSubscription: true,
-              subscription: { ...user.polarSubscription, organizationId: null },
-            }
+            hasSubscription: true,
+            subscription: { ...user.polarSubscription, organizationId: null },
+          }
           : { hasSubscription: false },
         shouldBypassLimits: true,
         extremeSearchUsage: 0,
@@ -445,66 +469,73 @@ export async function POST(req: Request) {
 
       const streamStartTime = Date.now();
 
-      const result = streamText({
-        model: scira.languageModel(model),
-        messages: convertToModelMessages(messages),
-        ...(model.includes('scira-qwen-32b')
-          ? {
+      console.log(`🔄 Starting streamText with model: ${model}`);
+      console.log(`🔄 Max tokens: ${maxTokens}`);
+      console.log(`🔄 Available tools: ${activeTools.length} tools`);
+
+      let result;
+      try {
+        result = streamText({
+          model: scira.languageModel(model),
+          messages: convertToModelMessages(messages),
+          ...(model.includes('scira-qwen-32b')
+            ? {
               temperature: 0.6,
               topP: 0.95,
               minP: 0,
             }
-          : model.includes('scira-qwen-235')
-            ? {
+            : model.includes('scira-qwen-235')
+              ? {
                 temperature: 0.7,
                 topP: 0.8,
                 minP: 0,
               }
-            : model.includes('scira-qwen-30')
-              ? {
+              : model.includes('scira-qwen-30')
+                ? {
                   temperature: 0.7,
                   topP: 0.8,
                   minP: 0,
                 }
-              : model.includes('scira-qwen-235-think')
-                ? {
+                : model.includes('scira-qwen-235-think')
+                  ? {
                     temperature: 0.6,
                     topP: 0.95,
                     topK: 20,
                     minP: 0,
                   }
-                : model.includes('scira-qwen-30-think')
-                  ? {
+                  : model.includes('scira-qwen-30-think')
+                    ? {
                       temperature: 0.6,
                       topP: 0.95,
                       minP: 0,
                     }
-                  : {}),
-        stopWhen: stepCountIs(5),
-        onAbort: ({ steps }) => {
-          // Handle cleanup when stream is aborted
-          console.log('Stream aborted after', steps.length, 'steps');
-          // Persist partial results to database
-        },
-        maxRetries: 10,
-        ...(model.includes('scira-5')
-          ? {
+                    : {}),
+          stopWhen: stepCountIs(5),
+          onAbort: ({ steps }) => {
+            // Handle cleanup when stream is aborted
+            console.log('Stream aborted after', steps.length, 'steps');
+            // Persist partial results to database
+          },
+          maxRetries: 3, // Reduced from 10 to avoid long waits
+          abortSignal: AbortSignal.timeout(380000), // 6.3 minutes abort signal (slightly less than client)
+          ...(model.includes('scira-5')
+            ? {
               maxOutputTokens: maxTokens,
             }
-          : {}),
-        activeTools: [...activeTools],
-        experimental_transform: markdownJoinerTransform(),
-        system:
-          instructions +
-          (customInstructions && (isCustomInstructionsEnabled ?? true)
-            ? `\n\nThe user's custom instructions are as follows and YOU MUST FOLLOW THEM AT ALL COSTS: ${customInstructions?.content}`
-            : '\n') +
-          (latitude && longitude ? `\n\nThe user's location is ${latitude}, ${longitude}.` : ''),
-        toolChoice: 'auto',
-        providerOptions: {
-          openai: {
-            ...(model.includes('scira-5')
-              ? {
+            : {}),
+          activeTools: [...activeTools],
+          experimental_transform: markdownJoinerTransform(),
+          system:
+            instructions +
+            (customInstructions && (isCustomInstructionsEnabled ?? true)
+              ? `\n\nThe user's custom instructions are as follows and YOU MUST FOLLOW THEM AT ALL COSTS: ${customInstructions?.content}`
+              : '\n') +
+            (latitude && longitude ? `\n\nThe user's location is ${latitude}, ${longitude}.` : ''),
+          toolChoice: 'auto',
+          providerOptions: {
+            openai: {
+              ...(model.includes('scira-5')
+                ? {
                   reasoningEffort: model === 'scira-5-high' ? 'high' : 'minimal',
                   reasoningSummary: model === 'scira-5-high' ? 'detailed' : 'auto',
                   parallelToolCalls: false,
@@ -512,190 +543,211 @@ export async function POST(req: Request) {
                   serviceTier: 'auto',
                   textVerbosity: 'high',
                 }
-              : {}),
-          } satisfies OpenAIResponsesProviderOptions,
-          xai: {
-            ...(model === 'scira-default'
-              ? {
+                : {}),
+            } satisfies OpenAIResponsesProviderOptions,
+            xai: {
+              ...(model === 'scira-default'
+                ? {
                   reasoningEffort: 'low',
                 }
-              : {}),
-          } satisfies XaiProviderOptions,
-          groq: {
-            ...(model === 'scira-gpt-oss-20' || model === 'scira-gpt-oss-120'
-              ? {
+                : {}),
+            } satisfies XaiProviderOptions,
+            groq: {
+              ...(model === 'scira-gpt-oss-20' || model === 'scira-gpt-oss-120'
+                ? {
                   reasoningEffort: 'high',
                 }
-              : {}),
-            ...(model === 'scira-qwen-32b'
-              ? {
+                : {}),
+              ...(model === 'scira-qwen-32b'
+                ? {
                   reasoningEffort: 'none',
                 }
-              : {}),
-            parallelToolCalls: false,
-            structuredOutputs: true,
-            serviceTier: 'auto',
-          } satisfies GroqProviderOptions,
-        },
-        tools: (() => {
-          const baseTools = {
-            // Stock & Financial Tools
-            stock_chart: stockChartTool,
-            currency_converter: currencyConverterTool,
-            coin_data: coinDataTool,
-            coin_data_by_contract: coinDataByContractTool,
-            coin_ohlc: coinOhlcTool,
+                : {}),
+              parallelToolCalls: false,
+              structuredOutputs: true,
+              serviceTier: 'auto',
+            } satisfies GroqProviderOptions,
+          },
+          tools: (() => {
+            const baseTools = {
+              // Stock & Financial Tools
+              stock_chart: stockChartTool,
+              currency_converter: currencyConverterTool,
+              coin_data: coinDataTool,
+              coin_data_by_contract: coinDataByContractTool,
+              coin_ohlc: coinOhlcTool,
 
-            // Search & Content Tools
-            x_search: xSearchTool,
-            web_search: webSearchTool(dataStream, searchProvider),
-            academic_search: academicSearchTool,
-            youtube_search: youtubeSearchTool,
-            reddit_search: redditSearchTool,
-            retrieve: retrieveTool,
+              // Search & Content Tools
+              x_search: xSearchTool,
+              web_search: webSearchTool(dataStream, searchProvider),
+              academic_search: academicSearchTool,
+              youtube_search: youtubeSearchTool,
+              reddit_search: redditSearchTool,
+              retrieve: retrieveTool,
 
-            // Media & Entertainment
-            movie_or_tv_search: movieTvSearchTool,
-            trending_movies: trendingMoviesTool,
-            trending_tv: trendingTvTool,
+              // Media & Entertainment
+              movie_or_tv_search: movieTvSearchTool,
+              trending_movies: trendingMoviesTool,
+              trending_tv: trendingTvTool,
 
-            // Location & Maps
-            find_place_on_map: findPlaceOnMapTool,
-            nearby_places_search: nearbyPlacesSearchTool,
-            get_weather_data: weatherTool,
+              // Location & Maps
+              find_place_on_map: findPlaceOnMapTool,
+              nearby_places_search: nearbyPlacesSearchTool,
+              get_weather_data: weatherTool,
 
-            // Utility Tools
-            text_translate: textTranslateTool,
-            code_interpreter: codeInterpreterTool,
-            track_flight: flightTrackerTool,
-            datetime: datetimeTool,
-            mcp_search: mcpSearchTool,
-            extreme_search: extremeSearchTool(dataStream),
-            greeting: greetingTool(timezone),
-          };
+              // Utility Tools
+              text_translate: textTranslateTool,
+              code_interpreter: codeInterpreterTool,
+              track_flight: flightTrackerTool,
+              datetime: datetimeTool,
+              mcp_search: mcpSearchTool,
+              extreme_search: extremeSearchTool(dataStream),
+              greeting: greetingTool(timezone),
+            };
 
-          if (!user) {
-            return baseTools;
-          }
+            if (!user) {
+              return baseTools;
+            }
 
-          // Add memory tools for authenticated users
-          const memoryTools = createMemoryTools(user.id);
-          return {
-            ...baseTools,
-            search_memories: memoryTools.searchMemories as any,
-            add_memory: memoryTools.addMemory as any,
-          } as any;
-        })(),
-        experimental_repairToolCall: async ({ toolCall, tools, inputSchema, error }) => {
-          if (NoSuchToolError.isInstance(error)) {
-            return null; // do not attempt to fix invalid tool names
-          }
+            // Add memory tools for authenticated users
+            const memoryTools = createMemoryTools(user.id);
+            return {
+              ...baseTools,
+              search_memories: memoryTools.searchMemories as any,
+              add_memory: memoryTools.addMemory as any,
+            } as any;
+          })(),
+          experimental_repairToolCall: async ({ toolCall, tools, inputSchema, error }) => {
+            if (NoSuchToolError.isInstance(error)) {
+              return null; // do not attempt to fix invalid tool names
+            }
 
-          console.log('Fixing tool call================================');
-          console.log('toolCall', toolCall);
-          console.log('tools', tools);
-          console.log('parameterSchema', inputSchema);
-          console.log('error', error);
+            console.log('Fixing tool call================================');
+            console.log('toolCall', toolCall);
+            console.log('tools', tools);
+            console.log('parameterSchema', inputSchema);
+            console.log('error', error);
 
-          const tool = tools[toolCall.toolName as keyof typeof tools];
+            const tool = tools[toolCall.toolName as keyof typeof tools];
 
-          if (!tool) {
-            return null;
-          }
+            if (!tool) {
+              return null;
+            }
 
-          const { object: repairedArgs } = await generateObject({
-            model: scira.languageModel('scira-grok-3'),
-            schema: tool.inputSchema,
-            prompt: [
-              `The model tried to call the tool "${toolCall.toolName}"` + ` with the following arguments:`,
-              JSON.stringify(toolCall.input),
-              `The tool accepts the following schema:`,
-              JSON.stringify(inputSchema(toolCall)),
-              'Please fix the arguments.',
-              'For the code interpreter tool do not use print statements.',
-              `For the web search make multiple queries to get the best results but avoid using the same query multiple times and do not use te include and exclude parameters.`,
-              `Today's date is ${new Date().toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}`,
-            ].join('\n'),
-          });
-
-          console.log('repairedArgs', repairedArgs);
-
-          return { ...toolCall, args: JSON.stringify(repairedArgs) };
-        },
-        onChunk(event) {
-          if (event.chunk.type === 'tool-call') {
-            console.log('Called Tool: ', event.chunk.toolName);
-          }
-        },
-        onStepFinish(event) {
-          if (event.warnings) {
-            console.log('Warnings: ', event.warnings);
-          }
-        },
-        onFinish: async (event) => {
-          console.log('Fin reason: ', event.finishReason);
-          console.log('Reasoning: ', event.reasoningText);
-          console.log('reasoning details: ', event.reasoning);
-          console.log('Steps: ', event.steps);
-          console.log('Messages: ', event.response.messages);
-          console.log('Message content: ', event.response.messages[event.response.messages.length - 1].content);
-          console.log('Response: ', event.response);
-          console.log('Provider metadata: ', event.providerMetadata);
-          console.log('Sources: ', event.sources);
-          console.log('Usage: ', event.usage);
-          console.log('Total Usage: ', event.totalUsage);
-
-          // Only proceed if user is authenticated
-          if (user?.id && event.finishReason === 'stop') {
-            after(async () => {
-              try {
-                if (!shouldBypassRateLimits(model, user)) {
-                  await incrementMessageUsage({ userId: user.id });
-                }
-              } catch (error) {
-                console.error('Failed to track message usage:', error);
-              }
+            const { object: repairedArgs } = await generateObject({
+              model: scira.languageModel('scira-grok-3'),
+              schema: tool.inputSchema,
+              prompt: [
+                `The model tried to call the tool "${toolCall.toolName}"` + ` with the following arguments:`,
+                JSON.stringify(toolCall.input),
+                `The tool accepts the following schema:`,
+                JSON.stringify(inputSchema(toolCall)),
+                'Please fix the arguments.',
+                'For the code interpreter tool do not use print statements.',
+                `For the web search make multiple queries to get the best results but avoid using the same query multiple times and do not use te include and exclude parameters.`,
+                `Today's date is ${new Date().toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}`,
+              ].join('\n'),
             });
 
-            if (group === 'extreme') {
+            console.log('repairedArgs', repairedArgs);
+
+            return { ...toolCall, args: JSON.stringify(repairedArgs) };
+          },
+          onChunk(event) {
+            if (event.chunk.type === 'tool-call') {
+              console.log('Called Tool: ', event.chunk.toolName);
+            }
+          },
+          onStepFinish(event) {
+            if (event.warnings) {
+              console.log('Warnings: ', event.warnings);
+            }
+          },
+          onFinish: async (event) => {
+            console.log('Fin reason: ', event.finishReason);
+            console.log('Reasoning: ', event.reasoningText);
+            console.log('reasoning details: ', event.reasoning);
+            console.log('Steps: ', event.steps);
+            console.log('Messages: ', event.response.messages);
+            console.log('Message content: ', event.response.messages[event.response.messages.length - 1].content);
+            console.log('Response: ', event.response);
+            console.log('Provider metadata: ', event.providerMetadata);
+            console.log('Sources: ', event.sources);
+            console.log('Usage: ', event.usage);
+            console.log('Total Usage: ', event.totalUsage);
+
+            // Only proceed if user is authenticated
+            if (user?.id && event.finishReason === 'stop') {
               after(async () => {
                 try {
-                  const extremeSearchUsed = event.steps?.some((step) =>
-                    step.toolCalls?.some((toolCall) => toolCall && toolCall.toolName === 'extreme_search'),
-                  );
-
-                  if (extremeSearchUsed) {
-                    console.log('Extreme search was used successfully, incrementing count');
-                    await incrementExtremeSearchUsage({ userId: user.id });
+                  if (!shouldBypassRateLimits(model, user)) {
+                    await incrementMessageUsage({ userId: user.id });
                   }
                 } catch (error) {
-                  console.error('Failed to track extreme search usage:', error);
+                  console.error('Failed to track message usage:', error);
                 }
               });
+
+              if (group === 'extreme') {
+                after(async () => {
+                  try {
+                    const extremeSearchUsed = event.steps?.some((step) =>
+                      step.toolCalls?.some((toolCall) => toolCall && toolCall.toolName === 'extreme_search'),
+                    );
+
+                    if (extremeSearchUsed) {
+                      console.log('Extreme search was used successfully, incrementing count');
+                      await incrementExtremeSearchUsage({ userId: user.id });
+                    }
+                  } catch (error) {
+                    console.error('Failed to track extreme search usage:', error);
+                  }
+                });
+              }
             }
-          }
 
-          const requestEndTime = Date.now();
-          const processingTime = (requestEndTime - requestStartTime) / 1000;
-          console.log('--------------------------------');
-          console.log(`Total request processing time: ${processingTime.toFixed(2)} seconds`);
-          console.log('--------------------------------');
-        },
-        onError(event) {
-          console.log('Error: ', event.error);
-          const requestEndTime = Date.now();
-          const processingTime = (requestEndTime - requestStartTime) / 1000;
-          console.log('--------------------------------');
-          console.log(`Request processing time (with error): ${processingTime.toFixed(2)} seconds`);
-          console.log('--------------------------------');
-        },
-      });
+            const requestEndTime = Date.now();
+            const processingTime = (requestEndTime - requestStartTime) / 1000;
+            console.log('--------------------------------');
+            console.log(`Total request processing time: ${processingTime.toFixed(2)} seconds`);
+            console.log('--------------------------------');
+          },
+          onError(event) {
+            console.log('❌ StreamText Error: ', event.error);
+            console.log('❌ Error type:', event.error?.constructor?.name);
 
-      result.consumeStream();
+            const errorMessage = event.error instanceof Error ? event.error.message : String(event.error);
+            console.log('❌ Error message:', errorMessage);
+
+            const requestEndTime = Date.now();
+            const processingTime = (requestEndTime - requestStartTime) / 1000;
+            console.log('--------------------------------');
+            console.log(`Request processing time (with error): ${processingTime.toFixed(2)} seconds`);
+            console.log('--------------------------------');
+
+            // Log specific timeout errors
+            if (errorMessage?.toLowerCase().includes('timeout')) {
+              console.log('🕐 Detected timeout error - this is likely a connection issue with the AI provider');
+            }
+          },
+        });
+
+        result.consumeStream();
+      } catch (streamError) {
+        console.error('🔥 StreamText failed:', streamError);
+
+        // Simply throw the error to be handled by the outer error handler
+        throw new ChatSDKError(
+          'bad_request:api',
+          streamError instanceof Error && streamError.message.toLowerCase().includes('timeout')
+            ? 'The AI service is experiencing timeouts. Please try again in a moment.'
+            : 'Sorry, I encountered an error while processing your request. Please try again.'
+        );
+      }
 
       dataStream.merge(
         result.toUIMessageStream({
@@ -718,11 +770,16 @@ export async function POST(req: Request) {
       );
     },
     onError(error) {
-      console.log('Error: ', error);
-      if (error instanceof Error && error.message.includes('Rate Limit')) {
+      console.log('🔥 UIMessageStream Error: ', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      if (errorMessage.includes('Rate Limit')) {
         return 'Oops, you have reached the rate limit! Please try again later.';
       }
-      return 'Oops, an error occurred!';
+      if (errorMessage.toLowerCase().includes('timeout')) {
+        return 'The AI service is experiencing timeouts. Please try again in a moment.';
+      }
+      return 'Oops, an error occurred! Please try again.';
     },
     onFinish: async ({ messages }) => {
       console.log('onFinish', messages);

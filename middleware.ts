@@ -1,48 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionCookie } from 'better-auth/cookies';
-
-const authRoutes = ['/sign-in', '/sign-up'];
-const protectedRoutes = ['/lookout'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   console.log('Pathname: ', pathname);
-  if (pathname === '/api/search') return NextResponse.next();
-  if (pathname.startsWith('/new') || pathname.startsWith('/api/search')) {
-    return NextResponse.next();
+
+  // Set extended timeout headers for API routes
+  if (pathname.startsWith('/api/')) {
+    const response = NextResponse.next();
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Connection', 'keep-alive');
+    response.headers.set('Keep-Alive', 'timeout=300, max=1000');
+    return response;
   }
 
-  // /api/payments/webhooks is a webhook endpoint that should be accessible without authentication
-  if (pathname.startsWith('/api/payments/webhooks')) {
-    return NextResponse.next();
-  }
-
-  // /api/auth/polar/webhooks
-  if (pathname.startsWith('/api/auth/polar/webhooks')) {
-    return NextResponse.next();
-  }
-
-  if (pathname.startsWith('/api/auth/dodopayments/webhooks')) {
-    return NextResponse.next();
-  }
-
-  if (pathname.startsWith('/api/raycast')) {
-    return NextResponse.next();
-  }
-
-  const sessionCookie = getSessionCookie(request);
-
-  // If user is authenticated but trying to access auth routes
-  if (sessionCookie && authRoutes.some((route) => pathname.startsWith(route))) {
-    console.log('Redirecting to home');
-    console.log('Session cookie: ', sessionCookie);
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
-  if (!sessionCookie && protectedRoutes.some((route) => pathname.startsWith(route))) {
-    return NextResponse.redirect(new URL('/sign-in', request.url));
-  }
-
+  // Allow all routes to pass through without authentication checks
   return NextResponse.next();
 }
 

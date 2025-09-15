@@ -11,13 +11,16 @@ export const serverEnv = createEnv({
     GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1),
     DAYTONA_API_KEY: z.string().min(1),
     DATABASE_URL: z.string().min(1),
-    BETTER_AUTH_SECRET: z.string().min(1),
-    GITHUB_CLIENT_ID: z.string().min(1),
-    GITHUB_CLIENT_SECRET: z.string().min(1),
-    GOOGLE_CLIENT_ID: z.string().min(1),
-    GOOGLE_CLIENT_SECRET: z.string().min(1),
-    TWITTER_CLIENT_ID: z.string().min(1),
-    TWITTER_CLIENT_SECRET: z.string().min(1),
+
+    // Authentication (now optional since removed)
+    BETTER_AUTH_SECRET: z.string().optional(),
+    GITHUB_CLIENT_ID: z.string().optional(),
+    GITHUB_CLIENT_SECRET: z.string().optional(),
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
+    TWITTER_CLIENT_ID: z.string().optional(),
+    TWITTER_CLIENT_SECRET: z.string().optional(),
+
     REDIS_URL: z.string().min(1),
     UPSTASH_REDIS_REST_URL: z.string().min(1),
     UPSTASH_REDIS_REST_TOKEN: z.string().min(1),

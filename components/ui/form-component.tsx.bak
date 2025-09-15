@@ -8,7 +8,6 @@ import { Textarea } from '../ui/textarea';
 import {
   models,
   requiresAuthentication,
-  requiresProSubscription,
   hasVisionSupport,
   hasPdfSupport,
   getAcceptedFileTypes,
@@ -28,9 +27,9 @@ const ProBadge = ({ className = '' }: { className?: string }) => (
 );
 import { track } from '@vercel/analytics';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { checkImageModeration, enhancePrompt, getDiscountConfigAction } from '@/app/actions';
-import { DiscountConfig } from '@/lib/discount';
-import { PRICING } from '@/lib/constants';
+import { ComprehensiveUserData } from '@/hooks/use-user-data';
+import { useSession } from '@/lib/auth-client';
+import { checkImageModeration, enhancePrompt } from '@/app/actions';
 import { LockIcon, MagicWandIcon } from '@phosphor-icons/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
@@ -50,8 +49,6 @@ import { UseChatHelpers } from '@ai-sdk/react';
 import { ChatMessage } from '@/lib/types';
 import { useLocation } from '@/hooks/use-location';
 import { useLocalStorage } from '@/hooks/use-local-storage';
-import { useUser } from '@/contexts/user-context';
-import { type ComprehensiveUserData } from '@/lib/user-data';
 
 interface ModelSwitcherProps {
   selectedModel: string;
@@ -61,7 +58,6 @@ interface ModelSwitcherProps {
   messages: Array<ChatMessage>;
   status: UseChatHelpers<ChatMessage>['status'];
   onModelSelect?: (model: (typeof models)[0]) => void;
-  subscriptionData?: any;
   user?: ComprehensiveUserData | null;
 }
 
@@ -74,16 +70,14 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
     messages,
     status,
     onModelSelect,
-    subscriptionData,
     user,
   }) => {
     const isProUser = useMemo(
-      () =>
-        user?.isProUser || (subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active'),
-      [user?.isProUser, subscriptionData?.hasSubscription, subscriptionData?.subscription?.status],
+      () => user?.isProUser || false,
+      [user?.isProUser],
     );
 
-    const isSubscriptionLoading = useMemo(() => user && !subscriptionData, [user, subscriptionData]);
+    const isSubscriptionLoading = useMemo(() => false, []);
 
     const availableModels = useMemo(() => models, []);
 
@@ -995,7 +989,7 @@ interface GroupSelectorProps {
 }
 
 const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGroup, onGroupSelect, status }) => {
-  const { user } = useUser();
+  const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const isExtreme = selectedGroup === 'extreme';
 
@@ -1010,11 +1004,11 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGrou
     () =>
       dynamicSearchGroups.filter((group) => {
         if (!group.show) return false;
-        if ('requireAuth' in group && group.requireAuth && !user) return false;
+        if ('requireAuth' in group && group.requireAuth && !session) return false;
         if (group.id === 'extreme') return false; // Exclude extreme from dropdown
         return true;
       }),
-    [dynamicSearchGroups, user],
+    [dynamicSearchGroups, session],
   );
 
   const selectedGroupData = useMemo(

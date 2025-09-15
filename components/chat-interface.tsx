@@ -1,6 +1,9 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 
+// Import enhanced fetch configuration for better timeout handling
+import '@/lib/enhanced-fetch';
+
 // CSS imports
 import 'katex/dist/katex.min.css';
 
@@ -63,8 +66,18 @@ const ChatInterface = memo(
     const [query] = useQueryState('query', parseAsString.withDefault(''));
     const [q] = useQueryState('q', parseAsString.withDefault(''));
     const [input, setInput] = useState<string>('');
+    const [isMounted, setIsMounted] = useState(false);
 
+    // Hydration-safe model selection
     const [selectedModel, setSelectedModel] = useLocalStorage('scira-selected-model', 'scira-default');
+
+    // Ensure hydration safety for model selection
+    useEffect(() => {
+      setIsMounted(true);
+    }, []);
+
+    // Use safe model selection for hydration
+    const safeSelectedModel = isMounted ? selectedModel : 'scira-default';
     const [selectedGroup, setSelectedGroup] = useLocalStorage<SearchGroupId>('scira-selected-group', 'web');
     const [isCustomInstructionsEnabled, setIsCustomInstructionsEnabled] = useLocalStorage(
       'scira-custom-instructions-enabled',
@@ -76,13 +89,9 @@ const ChatInterface = memo(
       'scira-upgrade-prompt-shown',
       false,
     );
-    const [persistedHasShownSignInPrompt, setPersitedHasShownSignInPrompt] = useLocalStorage(
-      'scira-signin-prompt-shown',
-      false,
-    );
     const [persistedHasShownLookoutAnnouncement, setPersitedHasShownLookoutAnnouncement] = useLocalStorage(
       'scira-lookout-announcement-shown',
-      false,
+      true, // Default to true to disable popup
     );
 
     const [searchProvider, _] = useLocalStorage<'exa' | 'parallel' | 'tavily' | 'firecrawl'>(
@@ -96,8 +105,8 @@ const ChatInterface = memo(
       createInitialState(
         initialVisibility,
         persistedHasShownUpgradeDialog,
-        persistedHasShownSignInPrompt,
-        persistedHasShownLookoutAnnouncement,
+        false, // hasShownSignInPrompt - placeholder
+        true, // Always set lookout announcement as shown to disable popup
       ),
     );
 
@@ -136,9 +145,6 @@ const ChatInterface = memo(
     // Use clean React Query hooks for all data fetching
     const { data: usageData, refetch: refetchUsage } = useUsageData(user || null);
 
-    // Sign-in prompt timer
-    const signInTimerRef = useRef<NodeJS.Timeout | null>(null);
-
     // Generate a consistent ID for new chats
     const chatId = useMemo(() => initialChatId ?? uuidv4(), []);
 
@@ -169,52 +175,12 @@ const ChatInterface = memo(
       }
     }, [selectedModel, isUserPro, proStatusLoading, setSelectedModel]);
 
-    // Timer for sign-in prompt for unauthenticated users
+    // Timer for lookout announcement - show after 30 seconds for all users
     useEffect(() => {
-      // If user becomes authenticated, reset the prompt flag and clear timer
-      if (user) {
-        if (signInTimerRef.current) {
-          clearTimeout(signInTimerRef.current);
-          signInTimerRef.current = null;
-        }
-        // Reset the flag so it can show again in future sessions if they log out
-        setPersitedHasShownSignInPrompt(false);
-        return;
-      }
-
-      // Only start timer if user is not authenticated and hasn't been shown the prompt yet
-      if (!user && !chatState.hasShownSignInPrompt) {
-        // Clear any existing timer
-        if (signInTimerRef.current) {
-          clearTimeout(signInTimerRef.current);
-        }
-
-        // Set timer for 1 minute (60000 ms)
-        signInTimerRef.current = setTimeout(() => {
-          dispatch({ type: 'SET_SHOW_SIGNIN_PROMPT', payload: true });
-          dispatch({ type: 'SET_HAS_SHOWN_SIGNIN_PROMPT', payload: true });
-          setPersitedHasShownSignInPrompt(true);
-        }, 60000);
-      }
-
-      // Cleanup timer on unmount
-      return () => {
-        if (signInTimerRef.current) {
-          clearTimeout(signInTimerRef.current);
-        }
-      };
-    }, [user, chatState.hasShownSignInPrompt, setPersitedHasShownSignInPrompt]);
-
-    // Timer for lookout announcement - show after 30 seconds for authenticated users
-    useEffect(() => {
-      if (user && !chatState.hasShownAnnouncementDialog) {
-        const timer = setTimeout(() => {
-          dispatch({ type: 'SET_SHOW_ANNOUNCEMENT_DIALOG', payload: true });
-          dispatch({ type: 'SET_HAS_SHOWN_ANNOUNCEMENT_DIALOG', payload: true });
-          setPersitedHasShownLookoutAnnouncement(true);
-        }, 3000);
-
-        return () => clearTimeout(timer);
+      // Popup disabled - set as already shown to prevent it from appearing
+      if (!chatState.hasShownAnnouncementDialog) {
+        dispatch({ type: 'SET_HAS_SHOWN_ANNOUNCEMENT_DIALOG', payload: true });
+        setPersitedHasShownLookoutAnnouncement(true);
       }
     }, [user, chatState.hasShownAnnouncementDialog, setPersitedHasShownLookoutAnnouncement]);
 
@@ -235,6 +201,12 @@ const ChatInterface = memo(
       id: chatId,
       transport: new DefaultChatTransport({
         api: '/api/search',
+        fetch: (url, options = {}) => {
+          return fetch(url, {
+            ...options,
+            signal: AbortSignal.timeout(400000), // 6.6 minutes timeout for client requests (matches enhanced-fetch)
+          });
+        },
         prepareSendMessagesRequest({ messages, body }) {
           // Use ref values to get current state
           return {
@@ -286,16 +258,22 @@ const ChatInterface = memo(
         }
 
         // Only generate suggested questions if authenticated user or private chat
-        if (message.parts && message.role === 'assistant' && (user || chatState.selectedVisibilityType === 'private')) {
-          const lastPart = message.parts[message.parts.length - 1];
-          const lastPartText = lastPart.type === 'text' ? lastPart.text : '';
-          const newHistory = [
-            { role: 'user', content: lastSubmittedQueryRef.current },
-            { role: 'assistant', content: lastPartText },
-          ];
-          console.log('newHistory', newHistory);
-          const { questions } = await suggestQuestions(newHistory);
-          dispatch({ type: 'SET_SUGGESTED_QUESTIONS', payload: questions });
+        if (message?.parts && Array.isArray(message.parts) && message.parts.length > 0 && message.role === 'assistant' && (user || chatState.selectedVisibilityType === 'private')) {
+          try {
+            const lastPart = message.parts[message.parts.length - 1];
+            const lastPartText = lastPart?.type === 'text' ? lastPart.text : '';
+            const newHistory = [
+              { role: 'user', content: lastSubmittedQueryRef.current || '' },
+              { role: 'assistant', content: lastPartText },
+            ];
+            console.log('newHistory', newHistory);
+            const { questions } = await suggestQuestions(newHistory);
+            if (questions && Array.isArray(questions)) {
+              dispatch({ type: 'SET_SUGGESTED_QUESTIONS', payload: questions });
+            }
+          } catch (suggestionError) {
+            console.warn('Error generating suggested questions:', suggestionError);
+          }
         }
       },
       onError: (error) => {
@@ -309,9 +287,12 @@ const ChatInterface = memo(
             });
           }
         } else {
-          console.error('Chat error:', error.cause, error.message);
+          // Safely handle error properties that might be undefined
+          const errorCause = error?.cause || '';
+          const errorMessage = error?.message || 'Unknown error occurred';
+          console.error('Chat error:', errorCause, errorMessage);
           toast.error('An error occurred.', {
-            description: `Oops! An error occurred while processing your request. ${error.cause || error.message}`,
+            description: `Oops! An error occurred while processing your request. ${errorCause || errorMessage}`,
           });
         }
       },
@@ -341,7 +322,8 @@ const ChatInterface = memo(
     if (error) {
       console.log('[useChat error]:', error);
       console.log('[error type]:', typeof error);
-      console.log('[error message]:', error.message);
+      console.log('[error message]:', error?.message || 'No message');
+      console.log('[error cause]:', error?.cause || 'No cause');
       console.log('[error instance]:', error instanceof Error, error instanceof ChatSDKError);
     }
 
@@ -583,27 +565,13 @@ const ChatInterface = memo(
           selectedVisibilityType={chatState.selectedVisibilityType}
           onVisibilityChange={handleVisibilityChange}
           status={status}
-          user={user || null}
           onHistoryClick={() => dispatch({ type: 'SET_COMMAND_DIALOG_OPEN', payload: true })}
-          isOwner={isOwner}
-          subscriptionData={subscriptionData}
-          isProUser={isUserPro}
-          isProStatusLoading={proStatusLoading}
-          isCustomInstructionsEnabled={isCustomInstructionsEnabled}
-          setIsCustomInstructionsEnabled={setIsCustomInstructionsEnabled}
         />
 
         {/* Chat Dialogs Component */}
         <ChatDialogs
           commandDialogOpen={chatState.commandDialogOpen}
           setCommandDialogOpen={(open) => dispatch({ type: 'SET_COMMAND_DIALOG_OPEN', payload: open })}
-          showSignInPrompt={chatState.showSignInPrompt}
-          setShowSignInPrompt={(open) => dispatch({ type: 'SET_SHOW_SIGNIN_PROMPT', payload: open })}
-          hasShownSignInPrompt={chatState.hasShownSignInPrompt}
-          setHasShownSignInPrompt={(value) => {
-            dispatch({ type: 'SET_HAS_SHOWN_SIGNIN_PROMPT', payload: value });
-            setPersitedHasShownSignInPrompt(value);
-          }}
           showUpgradeDialog={chatState.showUpgradeDialog}
           setShowUpgradeDialog={(open) => dispatch({ type: 'SET_SHOW_UPGRADE_DIALOG', payload: open })}
           hasShownUpgradeDialog={chatState.hasShownUpgradeDialog}
@@ -611,9 +579,9 @@ const ChatInterface = memo(
             dispatch({ type: 'SET_HAS_SHOWN_UPGRADE_DIALOG', payload: value });
             setPersitedHasShownUpgradeDialog(value);
           }}
-          showLookoutAnnouncement={chatState.showAnnouncementDialog}
+          showLookoutAnnouncement={false} // Disabled - popup removed
           setShowLookoutAnnouncement={(open) => dispatch({ type: 'SET_SHOW_ANNOUNCEMENT_DIALOG', payload: open })}
-          hasShownLookoutAnnouncement={chatState.hasShownAnnouncementDialog}
+          hasShownLookoutAnnouncement={true} // Always set as shown to prevent popup
           setHasShownLookoutAnnouncement={(value) => {
             dispatch({ type: 'SET_HAS_SHOWN_ANNOUNCEMENT_DIALOG', payload: value });
             setPersitedHasShownLookoutAnnouncement(value);
@@ -623,11 +591,10 @@ const ChatInterface = memo(
         />
 
         <div
-          className={`w-full p-2 sm:p-4 ${
-            status === 'ready' && messages.length === 0
-              ? 'flex-1 flex! flex-col! items-center! justify-center!' // Center everything when no messages
-              : 'mt-20! sm:mt-16! flex flex-col!' // Add top margin when showing messages
-          }`}
+          className={`w-full p-2 sm:p-4 ${status === 'ready' && messages.length === 0
+            ? 'flex-1 flex! flex-col! items-center! justify-center!' // Center everything when no messages
+            : 'mt-20! sm:mt-16! flex flex-col!' // Add top margin when showing messages
+            }`}
         >
           <div className={`w-full max-w-[95%] sm:max-w-2xl space-y-6 p-0 mx-auto transition-all duration-300`}>
             {status === 'ready' && messages.length === 0 && (
@@ -753,7 +720,7 @@ const ChatInterface = memo(
                   stop={stop}
                   messages={messages as ChatMessage[]}
                   sendMessage={sendMessage}
-                  selectedModel={selectedModel}
+                  selectedModel={safeSelectedModel}
                   setSelectedModel={handleModelChange}
                   resetSuggestedQuestions={resetSuggestedQuestions}
                   lastSubmittedQueryRef={lastSubmittedQueryRef}

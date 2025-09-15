@@ -105,16 +105,16 @@ export const createInitialState = (
   initialVisibility: 'public' | 'private' = 'private',
   hasShownUpgradeDialog: boolean = false,
   hasShownSignInPrompt: boolean = false,
-  hasShownAnnouncementDialog: boolean = false,
+  hasShownAnnouncementDialog: boolean = true, // Always set to true to disable popup
 ): ChatState => ({
   hasSubmitted: false,
   hasManuallyScrolled: false,
   showUpgradeDialog: false,
   showSignInPrompt: false,
-  showAnnouncementDialog: false,
+  showAnnouncementDialog: false, // Always false to prevent showing
   hasShownUpgradeDialog,
   hasShownSignInPrompt,
-  hasShownAnnouncementDialog,
+  hasShownAnnouncementDialog: true, // Always true to prevent future displays
   commandDialogOpen: false,
   anyDialogOpen: false,
   suggestedQuestions: [],

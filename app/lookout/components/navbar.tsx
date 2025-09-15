@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ArrowLeft01Icon, Crown02Icon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
-import { UserProfile } from '@/components/user-profile';
+import { NavigationMenu } from '@/components/user-profile';
 
 interface NavbarProps {
   user: any;
@@ -47,19 +47,7 @@ export function Navbar({ user, isProUser, isProStatusLoading, showProBadge = fal
           </div>
         ) : null}
 
-        <UserProfile
-          user={user || null}
-          subscriptionData={
-            user?.polarSubscription
-              ? {
-                  hasSubscription: true,
-                  subscription: user.polarSubscription,
-                }
-              : { hasSubscription: false }
-          }
-          isProUser={isProUser}
-          isProStatusLoading={isProStatusLoading}
-        />
+        <NavigationMenu />
       </div>
     </div>
   );
