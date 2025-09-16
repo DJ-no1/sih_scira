@@ -10,8 +10,8 @@ if (originalFetch) {
     globalThis.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
         const enhancedInit: RequestInit = {
             ...init,
-            // Create a timeout that's longer than our server timeout
-            signal: init?.signal || AbortSignal.timeout(400000), // 6.6 minutes
+            // Create a timeout that's shorter for better user experience
+            signal: init?.signal || AbortSignal.timeout(240000), // 4 minutes
         };
 
         // Only set basic headers without manual Keep-Alive configuration
@@ -20,7 +20,7 @@ if (originalFetch) {
         enhancedInit.headers = headers;
 
         console.log(`🌐 Enhanced fetch called for: ${typeof input === 'string' ? input : input.toString()}`);
-        console.log(`⏱️  Timeout set to: ${400000}ms (6.6 minutes)`);
+        console.log(`⏱️  Timeout set to: ${240000}ms (4 minutes)`);
 
         try {
             const response = await originalFetch(input, enhancedInit);
@@ -43,8 +43,8 @@ if (originalFetch) {
 
             // Enhance error message for better debugging
             if (isError && (error.name === 'AbortError' || error.message.includes('timeout'))) {
-                console.error('🕐 Request timed out after 6.6 minutes');
-                const timeoutError = new Error(`Request timeout: ${url} took longer than 6.6 minutes to respond`);
+                console.error('🕐 Request timed out after 4 minutes');
+                const timeoutError = new Error(`Request timeout: ${url} took longer than 4 minutes to respond`);
                 timeoutError.name = 'TimeoutError';
                 (timeoutError as any).cause = error;
                 throw timeoutError;
@@ -64,19 +64,19 @@ if (typeof XMLHttpRequest !== 'undefined') {
 
     XMLHttpRequest.prototype.open = function (method: string, url: string | URL, async?: boolean, user?: string | null, password?: string | null) {
         // Set timeout before calling original open
-        this.timeout = 400000; // 6.6 minutes
+        this.timeout = 240000; // 4 minutes
         return originalOpen.call(this, method, url, async ?? true, user, password);
     };
 
     XMLHttpRequest.prototype.send = function (body?: Document | XMLHttpRequestBodyInit | null) {
         // Ensure timeout is set even if not set in open
         if (this.timeout === 0) {
-            this.timeout = 400000; // 6.6 minutes
+            this.timeout = 240000; // 4 minutes
         }
 
         // Add error event listener for better debugging
         this.addEventListener('timeout', () => {
-            console.error('🕐 XMLHttpRequest timeout after 6.6 minutes');
+            console.error('🕐 XMLHttpRequest timeout after 4 minutes');
         });
 
         this.addEventListener('error', (event) => {
@@ -92,8 +92,8 @@ if (typeof XMLHttpRequest !== 'undefined') {
 
 // Export configuration for reference
 export const ENHANCED_TIMEOUT_CONFIG = {
-    fetchTimeout: 400000, // 6.6 minutes
-    xhrTimeout: 400000,   // 6.6 minutes
-    headers: 300000,      // 5 minutes
-    body: 300000,         // 5 minutes
+    fetchTimeout: 240000, // 4 minutes
+    xhrTimeout: 240000,   // 4 minutes
+    headers: 180000,      // 3 minutes
+    body: 180000,         // 3 minutes
 };
