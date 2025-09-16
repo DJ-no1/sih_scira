@@ -8,8 +8,6 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { CheckIcon } from 'lucide-react';
 import { PRICING } from '@/lib/constants';
-import { DiscountConfig } from '@/lib/discount';
-import { getDiscountConfigAction } from '@/app/actions';
 import { useState, useEffect, useMemo } from 'react';
 
 // Pro Badge Component
@@ -27,80 +25,15 @@ interface PostMessageUpgradeDialogProps {
 }
 
 export const PostMessageUpgradeDialog = React.memo(({ open, onOpenChange }: PostMessageUpgradeDialogProps) => {
-  const [discountConfig, setDiscountConfig] = useState<DiscountConfig | null>(null);
-
-  useEffect(() => {
-    const fetchDiscountConfig = async () => {
-      try {
-        const config = await getDiscountConfigAction();
-        setDiscountConfig(config);
-      } catch (error) {
-        console.warn('Failed to fetch discount config:', error);
-      }
-    };
-
-    if (open) {
-      fetchDiscountConfig();
-    }
-  }, [open]);
-
   const pricing = useMemo(() => {
     const defaultUSDPrice = PRICING.PRO_MONTHLY;
     const defaultINRPrice = PRICING.PRO_MONTHLY_INR;
 
-    if (!discountConfig) {
-      return {
-        usd: { finalPrice: defaultUSDPrice, hasDiscount: false, originalPrice: defaultUSDPrice },
-        inr: { finalPrice: defaultINRPrice, hasDiscount: false, originalPrice: defaultINRPrice },
-      };
-    }
-
-    // Check if discount should be applied
-    const isDevMode = discountConfig?.dev || process.env.NODE_ENV === 'development';
-    const shouldApplyDiscount = isDevMode
-      ? discountConfig?.code && discountConfig?.message
-      : discountConfig?.enabled && discountConfig?.code && discountConfig?.message;
-
-    // Calculate USD pricing with discount
-    const usdOriginalPrice: number = defaultUSDPrice;
-    let usdFinalPrice: number = defaultUSDPrice;
-    let hasUSDDiscount = false;
-
-    if (shouldApplyDiscount) {
-      if (discountConfig.finalPrice && discountConfig.finalPrice < defaultUSDPrice) {
-        usdFinalPrice = discountConfig.finalPrice;
-        hasUSDDiscount = true;
-      } else if (discountConfig.percentage) {
-        usdFinalPrice = Number((defaultUSDPrice * (1 - discountConfig.percentage / 100)).toFixed(2));
-        hasUSDDiscount = true;
-      }
-    }
-
-    // Calculate INR pricing with discount
-    const inrOriginalPrice: number = defaultINRPrice;
-    let inrFinalPrice: number = defaultINRPrice;
-    let hasINRDiscount = false;
-
-    if (shouldApplyDiscount && discountConfig.inrPrice && discountConfig.inrPrice < defaultINRPrice) {
-      inrFinalPrice = discountConfig.inrPrice;
-      hasINRDiscount = true;
-    }
-
     return {
-      usd: {
-        finalPrice: usdFinalPrice,
-        originalPrice: usdOriginalPrice,
-        hasDiscount: hasUSDDiscount,
-      },
-      inr: discountConfig.inrPrice
-        ? {
-          finalPrice: inrFinalPrice,
-          originalPrice: inrOriginalPrice,
-          hasDiscount: hasINRDiscount,
-        }
-        : null,
+      usd: { originalPrice: defaultUSDPrice, finalPrice: defaultUSDPrice, hasDiscount: false },
+      inr: { originalPrice: defaultINRPrice, finalPrice: defaultINRPrice, hasDiscount: false },
     };
-  }, [discountConfig]);
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -116,27 +49,6 @@ export const PostMessageUpgradeDialog = React.memo(({ open, onOpenChange }: Post
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
             <div className="absolute bottom-6 left-6 right-6">
-              <div className="mb-3">
-                {discountConfig &&
-                  (() => {
-                    const isDevMode = discountConfig.dev || process.env.NODE_ENV === 'development';
-                    const shouldShowDiscount = isDevMode
-                      ? discountConfig.code && discountConfig.message
-                      : discountConfig.enabled && discountConfig.code && discountConfig.message;
-
-                    return (
-                      shouldShowDiscount && (
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/20 text-white text-sm font-medium">
-                          {pricing.usd.hasDiscount
-                            ? discountConfig.percentage
-                              ? `${discountConfig.percentage}% OFF`
-                              : `$${(pricing.usd.originalPrice - pricing.usd.finalPrice).toFixed(2)} OFF`
-                            : discountConfig.message || 'Special Offer'}
-                        </div>
-                      )
-                    );
-                  })()}
-              </div>
               <DialogTitle className="flex items-center gap-3 text-white mb-2">
                 <span className="text-4xl font-medium flex items-center gap-2 font-be-vietnam-pro">
                   scira
@@ -178,7 +90,7 @@ export const PostMessageUpgradeDialog = React.memo(({ open, onOpenChange }: Post
                 }}
                 className="backdrop-blur-md bg-white/90 border border-white/20 text-black hover:bg-white w-full font-medium mt-3"
               >
-                {discountConfig?.buttonText || 'Upgrade to Pro'}
+                Upgrade to Pro
               </Button>
             </div>
           </div>

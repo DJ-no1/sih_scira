@@ -1,5 +1,4 @@
 import { webSearchTool } from '@/lib/tools';
-import { xSearchTool } from '@/lib/tools/x-search';
 import { groq } from '@ai-sdk/groq';
 import { xai } from '@ai-sdk/xai';
 import { convertToModelMessages, customProvider, generateText, stepCountIs } from 'ai';
@@ -74,13 +73,8 @@ export async function POST(req: Request) {
   // Get the appropriate system prompt based on the group
   const systemPrompt = groupSystemPrompts[group as keyof typeof groupSystemPrompts];
 
-  // Determine which tools to activate based on the group
-  const activeTools =
-    group === 'x'
-      ? ['x_search' as const]
-      : group === 'web'
-        ? ['web_search' as const]
-        : ['web_search' as const, 'x_search' as const];
+  // Only web search is available now
+  const activeTools = ['web_search' as const];
 
   const { text, steps } = await generateText({
     model: scira.languageModel(model),
@@ -91,7 +85,6 @@ export async function POST(req: Request) {
     experimental_activeTools: activeTools,
     tools: {
       web_search: webSearchTool(undefined, "exa"),
-      x_search: xSearchTool,
     },
   });
 

@@ -2,8 +2,8 @@
 import http from 'http';
 import https from 'https';
 
-// Configure global timeout settings
-const TIMEOUT_DURATION = 380000; // 6.3 minutes
+// Configure global timeout settings - match enhanced-fetch timeout
+const TIMEOUT_DURATION = 400000; // 6.6 minutes
 const KEEP_ALIVE_DURATION = 60000; // 1 minute
 
 // Create optimized agents with extended timeouts

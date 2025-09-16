@@ -28,10 +28,10 @@ const ProBadge = ({ className = '' }: { className?: string }) => (
 );
 import { track } from '@vercel/analytics';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { checkImageModeration, enhancePrompt, getDiscountConfigAction } from '@/app/actions';
-import { DiscountConfig } from '@/lib/discount';
+import { checkImageModeration, enhancePrompt } from '@/app/actions';
 import { PRICING } from '@/lib/constants';
 import { LockIcon, MagicWandIcon } from '@phosphor-icons/react';
+import { ClientIcon } from './client-icon';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
   CpuIcon,
@@ -92,98 +92,21 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
     const [selectedProModel, setSelectedProModel] = useState<(typeof models)[0] | null>(null);
     const [selectedAuthModel, setSelectedAuthModel] = useState<(typeof models)[0] | null>(null);
     const [open, setOpen] = useState(false);
-    const [discountConfig, setDiscountConfig] = useState<DiscountConfig | null>(null);
 
     const location = useLocation();
 
-    // Fetch discount config when needed
-    const fetchDiscountConfig = useCallback(async () => {
-      if (discountConfig) return; // Already fetched
-
-      try {
-        const config = await getDiscountConfigAction();
-        setDiscountConfig(config);
-      } catch (error) {
-        console.error('Failed to fetch discount config:', error);
-      }
-    }, [discountConfig]);
-
-    // Calculate pricing with discounts
+    // Calculate pricing
     const calculatePricing = useCallback(() => {
       const defaultUSDPrice = PRICING.PRO_MONTHLY;
       const defaultINRPrice = PRICING.PRO_MONTHLY_INR;
 
-      // Check if discount should be applied
-      const isDevMode = discountConfig?.dev || process.env.NODE_ENV === 'development';
-      const shouldApplyDiscount = isDevMode
-        ? discountConfig?.code && discountConfig?.message
-        : discountConfig?.enabled && discountConfig?.code && discountConfig?.message;
-
-      if (!discountConfig || !shouldApplyDiscount) {
-        return {
-          usd: { originalPrice: defaultUSDPrice, finalPrice: defaultUSDPrice, hasDiscount: false },
-          inr: location.isIndia
-            ? { originalPrice: defaultINRPrice, finalPrice: defaultINRPrice, hasDiscount: false }
-            : null,
-        };
-      }
-
-      // USD pricing: prefer explicit finalPrice over percentage
-      let usdPricing: { originalPrice: number; finalPrice: number; hasDiscount: boolean } = {
-        originalPrice: defaultUSDPrice,
-        finalPrice: defaultUSDPrice,
-        hasDiscount: false,
-      };
-      if (typeof discountConfig.finalPrice === 'number') {
-        const original =
-          typeof discountConfig.originalPrice === 'number' ? discountConfig.originalPrice : defaultUSDPrice;
-        usdPricing = {
-          originalPrice: original,
-          finalPrice: discountConfig.finalPrice,
-          hasDiscount: true,
-        };
-      } else if (typeof discountConfig.percentage === 'number') {
-        const base = typeof discountConfig.originalPrice === 'number' ? discountConfig.originalPrice : defaultUSDPrice;
-        const usdSavings = (base * discountConfig.percentage) / 100;
-        const usdFinalPrice = base - usdSavings;
-        usdPricing = {
-          originalPrice: base,
-          finalPrice: usdFinalPrice,
-          hasDiscount: true,
-        };
-      }
-
-      // INR pricing: prefer explicit inrPrice, otherwise derive from percentage
-      let inrPricing: { originalPrice: number; finalPrice: number; hasDiscount: boolean } | null = null;
-      if (location.isIndia) {
-        if (typeof discountConfig.inrPrice === 'number') {
-          inrPricing = {
-            originalPrice: defaultINRPrice,
-            finalPrice: discountConfig.inrPrice,
-            hasDiscount: true,
-          };
-        } else if (typeof discountConfig.percentage === 'number') {
-          const inrSavings = (defaultINRPrice * discountConfig.percentage) / 100;
-          const inrFinalPrice = defaultINRPrice - inrSavings;
-          inrPricing = {
-            originalPrice: defaultINRPrice,
-            finalPrice: inrFinalPrice,
-            hasDiscount: true,
-          };
-        } else {
-          inrPricing = {
-            originalPrice: defaultINRPrice,
-            finalPrice: defaultINRPrice,
-            hasDiscount: false,
-          };
-        }
-      }
-
       return {
-        usd: usdPricing,
-        inr: inrPricing,
+        usd: { originalPrice: defaultUSDPrice, finalPrice: defaultUSDPrice, hasDiscount: false },
+        inr: location.isIndia
+          ? { originalPrice: defaultINRPrice, finalPrice: defaultINRPrice, hasDiscount: false }
+          : null,
       };
-    }, [discountConfig, location.isIndia]);
+    }, [location.isIndia]);
 
     const pricing = calculatePricing();
 
@@ -304,7 +227,6 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
 
         if (requiresPro && !isProUser) {
           setSelectedProModel(model);
-          fetchDiscountConfig();
           setShowUpgradeDialog(true);
           return;
         }
@@ -338,7 +260,13 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
                 className,
               )}
             >
-              <HugeiconsIcon icon={CpuIcon} size={24} color="currentColor" strokeWidth={2} />
+              <HugeiconsIcon
+                icon={CpuIcon}
+                size={24}
+                color="currentColor"
+                strokeWidth={2}
+                suppressHydrationWarning
+              />
               <span className="text-xs font-medium sm:block hidden">{currentModel?.label || 'Select Model'}</span>
               <ChevronsUpDown className="h-4 w-4 opacity-50" />
             </Button>
@@ -406,7 +334,6 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
                                 setShowSignInDialog(true);
                               } else if (requiresPro && !isProUser) {
                                 setSelectedProModel(model);
-                                fetchDiscountConfig();
                                 setShowUpgradeDialog(true);
                               }
                             }}
@@ -423,6 +350,7 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
                                     color="currentColor"
                                     strokeWidth={1.5}
                                     className="text-muted-foreground"
+                                    suppressHydrationWarning
                                   />
                                 )}
                               </div>
@@ -466,6 +394,7 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
                                       color="currentColor"
                                       strokeWidth={1.5}
                                       className="text-muted-foreground"
+                                      suppressHydrationWarning
                                     />
                                   );
                                 }
@@ -521,40 +450,8 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
                     </div>
                   </DialogTitle>
                   <DialogDescription className="text-white/90">
-                    {discountConfig &&
-                      (() => {
-                        const isDevMode = discountConfig.dev || process.env.NODE_ENV === 'development';
-                        const shouldShowDiscount = isDevMode
-                          ? discountConfig.code && discountConfig.message && discountConfig.percentage
-                          : discountConfig.enabled &&
-                            discountConfig.code &&
-                            discountConfig.message &&
-                            discountConfig.percentage;
-
-                        if (shouldShowDiscount && discountConfig.showPrice && discountConfig.finalPrice) {
-                          return (
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/20 text-white text-sm font-medium">
-                                {discountConfig.showPrice && discountConfig.finalPrice
-                                  ? `$${PRICING.PRO_MONTHLY - discountConfig.finalPrice} OFF for a year`
-                                  : discountConfig.percentage
-                                    ? `${discountConfig.percentage}% OFF`
-                                    : 'DISCOUNT'}
-                              </div>
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
                     <div className="flex items-center gap-2">
-                      {pricing.usd.hasDiscount ? (
-                        <>
-                          <span className="text-lg text-white/60 line-through">${pricing.usd.originalPrice}</span>
-                          <span className="text-2xl font-bold">${pricing.usd.finalPrice.toFixed(2)}</span>
-                        </>
-                      ) : (
-                        <span className="text-2xl font-bold">${pricing.usd.finalPrice}</span>
-                      )}
+                      <span className="text-2xl font-bold">${pricing.usd.finalPrice}</span>
                       <span className="text-sm text-white/80">/month</span>
                     </div>
                     <p className="text-sm text-white/80 text-left mt-2">
@@ -1052,6 +949,7 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGrou
                   role="combobox"
                   aria-expanded={open && !isExtreme}
                   size="sm"
+                  suppressHydrationWarning
                   onClick={() => {
                     if (isExtreme) {
                       // Switch back to web mode when clicking groups in extreme mode
@@ -1065,20 +963,30 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGrou
                   }}
                   className={cn(
                     'flex items-center gap-1.5 !m-0 !px-1.5 h-6 !rounded-md transition-all cursor-pointer',
-                    !isExtreme
-                      ? 'bg-accent text-foreground hover:bg-accent/80'
-                      : 'text-muted-foreground hover:bg-accent',
+                    isExtreme
+                      ? 'text-muted-foreground hover:bg-accent'
+                      : 'bg-accent text-foreground hover:bg-accent/80',
                   )}
                 >
                   {selectedGroupData && !isExtreme && (
                     <>
-                      <HugeiconsIcon icon={selectedGroupData.icon} size={30} color="currentColor" strokeWidth={2} />
+                      <ClientIcon
+                        icon={selectedGroupData.icon}
+                        size={30}
+                        color="currentColor"
+                        strokeWidth={2}
+                      />
                       <ChevronsUpDown className="size-4.5 opacity-50" />
                     </>
                   )}
                   {isExtreme && (
                     <>
-                      <HugeiconsIcon icon={GlobalSearchIcon} size={30} color="currentColor" strokeWidth={2} />
+                      <ClientIcon
+                        icon={GlobalSearchIcon}
+                        size={30}
+                        color="currentColor"
+                        strokeWidth={2}
+                      />
                     </>
                   )}
                 </Button>
@@ -1134,7 +1042,12 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGrou
                         )}
                       >
                         <div className="flex items-center gap-2 min-w-0 flex-1 pr-4">
-                          <HugeiconsIcon icon={group.icon} size={30} color="currentColor" strokeWidth={2} />
+                          <ClientIcon
+                            icon={group.icon}
+                            size={30}
+                            color="currentColor"
+                            strokeWidth={2}
+                          />
                           <div className="flex flex-col min-w-0 flex-1">
                             <div className="font-medium truncate text-[11px] text-foreground">{group.name}</div>
                             <div className="text-[9px] text-muted-foreground truncate leading-tight text-wrap!">
@@ -1160,13 +1073,19 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGrou
             <Button
               variant="ghost"
               size="sm"
+              suppressHydrationWarning
               onClick={handleToggleExtreme}
               className={cn(
                 'flex items-center gap-1.5 px-3 h-6 rounded-md transition-all',
                 isExtreme ? 'bg-accent text-foreground hover:bg-accent/80' : 'text-muted-foreground hover:bg-accent',
               )}
             >
-              <HugeiconsIcon icon={AtomicPowerIcon} size={30} color="currentColor" strokeWidth={2} />
+              <ClientIcon
+                icon={AtomicPowerIcon}
+                size={30}
+                color="currentColor"
+                strokeWidth={2}
+              />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
@@ -1214,7 +1133,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isTypewriting, setIsTypewriting] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
-  const [discountConfig, setDiscountConfig] = useState<DiscountConfig | null>(null);
 
   // Combined state for animations to avoid restart issues
   const isEnhancementActive = isEnhancing || isTypewriting;
@@ -1248,110 +1166,18 @@ const FormComponent: React.FC<FormComponentProps> = ({
     };
   }, [cleanupMediaRecorder]);
 
-  // Fetch discount config when needed
-  const fetchDiscountConfigForm = useCallback(async () => {
-    if (discountConfig) return; // Already fetched
-
-    try {
-      const config = await getDiscountConfigAction();
-      setDiscountConfig(config);
-    } catch (error) {
-      console.error('Failed to fetch discount config:', error);
-    }
-  }, [discountConfig]);
-
-  // Calculate pricing with discounts
+  // Calculate simple pricing
   const calculatePricing = useCallback(() => {
     const defaultUSDPrice = PRICING.PRO_MONTHLY;
     const defaultINRPrice = PRICING.PRO_MONTHLY_INR;
 
-    console.log('calculatePricing called with:', {
-      discountConfig,
-      isIndia: location.isIndia,
-      nodeEnv: process.env.NODE_ENV,
-    });
-
-    // Check if discount should be applied
-    const isDevMode = discountConfig?.dev || process.env.NODE_ENV === 'development';
-    const shouldApplyDiscount = isDevMode
-      ? discountConfig?.code && discountConfig?.message
-      : discountConfig?.enabled && discountConfig?.code && discountConfig?.message;
-
-    console.log('Discount check:', {
-      isDevMode,
-      shouldApplyDiscount,
-      enabled: discountConfig?.enabled,
-      code: discountConfig?.code,
-      message: discountConfig?.message,
-      percentage: discountConfig?.percentage,
-    });
-
-    if (!discountConfig || !shouldApplyDiscount) {
-      console.log('No discount applied - returning default pricing');
-      return {
-        usd: { originalPrice: defaultUSDPrice, finalPrice: defaultUSDPrice, hasDiscount: false },
-        inr: location.isIndia
-          ? { originalPrice: defaultINRPrice, finalPrice: defaultINRPrice, hasDiscount: false }
-          : null,
-      };
-    }
-
-    // USD pricing: prefer explicit finalPrice over percentage
-    let usdPricing: { originalPrice: number; finalPrice: number; hasDiscount: boolean } = {
-      originalPrice: defaultUSDPrice,
-      finalPrice: defaultUSDPrice,
-      hasDiscount: false,
-    };
-    if (typeof discountConfig.finalPrice === 'number') {
-      const original =
-        typeof discountConfig.originalPrice === 'number' ? discountConfig.originalPrice : defaultUSDPrice;
-      usdPricing = {
-        originalPrice: original,
-        finalPrice: discountConfig.finalPrice,
-        hasDiscount: true,
-      };
-    } else if (typeof discountConfig.percentage === 'number') {
-      const base = typeof discountConfig.originalPrice === 'number' ? discountConfig.originalPrice : defaultUSDPrice;
-      const usdSavings = (base * discountConfig.percentage) / 100;
-      const usdFinalPrice = base - usdSavings;
-      usdPricing = {
-        originalPrice: base,
-        finalPrice: usdFinalPrice,
-        hasDiscount: true,
-      };
-    }
-
-    // INR pricing: prefer explicit inrPrice, otherwise derive from percentage
-    let inrPricing: { originalPrice: number; finalPrice: number; hasDiscount: boolean } | null = null;
-    if (location.isIndia) {
-      if (typeof discountConfig.inrPrice === 'number') {
-        inrPricing = {
-          originalPrice: defaultINRPrice,
-          finalPrice: discountConfig.inrPrice,
-          hasDiscount: true,
-        };
-      } else if (typeof discountConfig.percentage === 'number') {
-        const inrSavings = (defaultINRPrice * discountConfig.percentage) / 100;
-        const inrFinalPrice = defaultINRPrice - inrSavings;
-        inrPricing = {
-          originalPrice: defaultINRPrice,
-          finalPrice: inrFinalPrice,
-          hasDiscount: true,
-        };
-      } else {
-        inrPricing = {
-          originalPrice: defaultINRPrice,
-          finalPrice: defaultINRPrice,
-          hasDiscount: false,
-        };
-      }
-    }
-
     return {
-      usd: usdPricing,
-      inr: inrPricing,
+      usd: { originalPrice: defaultUSDPrice, finalPrice: defaultUSDPrice, hasDiscount: false },
+      inr: location.isIndia
+        ? { originalPrice: defaultINRPrice, finalPrice: defaultINRPrice, hasDiscount: false }
+        : null,
     };
-  }, [discountConfig, location.isIndia]);
+  }, [location.isIndia]);
 
   const pricing = calculatePricing();
 
@@ -1469,7 +1295,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
   const handleEnhance = useCallback(async () => {
     if (!isProUser) {
-      fetchDiscountConfigForm();
       setShowUpgradeDialog(true);
       return;
     }
@@ -1514,7 +1339,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
     typewriterText,
     isEnhancing,
     setShowUpgradeDialog,
-    fetchDiscountConfigForm,
   ]);
 
   const handleRecord = useCallback(async () => {
@@ -2284,7 +2108,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
   );
 
   const submitForm = useCallback(() => {
-    onSubmit({ preventDefault: () => {}, stopPropagation: () => {} } as React.FormEvent<HTMLFormElement>);
+    onSubmit({ preventDefault: () => { }, stopPropagation: () => { } } as React.FormEvent<HTMLFormElement>);
     resetSuggestedQuestions();
 
     inputRef.current?.focus();
@@ -2399,7 +2223,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
             accept={getAcceptedFileTypes(
               selectedModel,
               user?.isProUser ||
-                (subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active'),
+              (subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active'),
             )}
             tabIndex={-1}
           />
@@ -2412,7 +2236,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
             accept={getAcceptedFileTypes(
               selectedModel,
               user?.isProUser ||
-                (subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active'),
+              (subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active'),
             )}
             tabIndex={-1}
           />
@@ -2438,7 +2262,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                       size: 0,
                     } as Attachment
                   }
-                  onRemove={() => {}}
+                  onRemove={() => { }}
                   isUploading={true}
                 />
               ))}
@@ -2602,7 +2426,11 @@ const FormComponent: React.FC<FormComponentProps> = ({
                           disabled={isEnhancing || isTypewriting}
                         >
                           <span className="block">
-                            <HugeiconsIcon icon={DocumentAttachmentIcon} size={16} />
+                            <HugeiconsIcon
+                              icon={DocumentAttachmentIcon}
+                              size={16}
+                              suppressHydrationWarning
+                            />
                           </span>
                         </Button>
                       </TooltipTrigger>
@@ -2825,7 +2653,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                     }}
                     className="backdrop-blur-md bg-white/90 border border-white/20 text-black hover:bg-white w-full font-medium mt-3"
                   >
-                    {discountConfig?.buttonText || 'Upgrade to Pro'}
+                    Upgrade to Pro
                   </Button>
                 </div>
               </div>

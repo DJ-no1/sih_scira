@@ -2,10 +2,10 @@
 // This file can be extended when undici becomes available
 
 export const TIMEOUT_CONFIG = {
-    timeout: 300000, // 5 minutes
-    keepAlive: 30000, // 30 seconds
-    headers: 300000, // 5 minutes for headers
-    body: 300000, // 5 minutes for body
+    timeout: 400000, // 6.6 minutes - match enhanced-fetch timeout
+    keepAlive: 60000, // 1 minute
+    headers: 400000, // 6.6 minutes for headers
+    body: 400000, // 6.6 minutes for body
 };
 
 // Log configuration

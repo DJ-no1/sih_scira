@@ -18,8 +18,6 @@ import ReactECharts, { EChartsOption } from 'echarts-for-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import { DataExtremeSearchPart } from '@/lib/types';
-import XSearch from '@/components/x-search';
-import { XLogoIcon } from '@phosphor-icons/react/dist/ssr';
 
 // Minimal color palette for charts with better contrast
 const CHART_COLORS = {
@@ -1846,7 +1844,7 @@ const ExtremeSearchComponent = ({
                   onClick={() => toggleItemExpansion(xSearch.id)}
                 >
                   <div className="p-0.5 rounded bg-black dark:bg-white flex-shrink-0">
-                    <XLogoIcon className="size-2.5 text-white dark:text-black" />
+                    <span className="size-2.5 text-white dark:text-black text-xs">X</span>
                   </div>
                   <span className="text-foreground text-xs min-w-0 flex-1">
                     {isLoading && !isCompleted ? (
@@ -1909,7 +1907,7 @@ const ExtremeSearchComponent = ({
                                   transition={{ duration: 0.15, delay: index * 0.02 }}
                                 >
                                   <div className="p-0.5 rounded bg-black dark:bg-white flex-shrink-0">
-                                    <XLogoIcon className="size-2.5 text-white dark:text-black" />
+                                    <span className="size-2.5 text-white dark:text-black text-xs">X</span>
                                   </div>
                                   <span className="text-muted-foreground truncate max-w-[140px]" title={title}>
                                     {title}
@@ -2286,7 +2284,7 @@ const ExtremeSearchComponent = ({
           };
           return (
             <div className="space-y-3">
-              <XSearch result={combined as any} args={combinedArgs} />
+              <div className="p-4 text-gray-500">X Search functionality has been removed</div>
             </div>
           );
         })()}

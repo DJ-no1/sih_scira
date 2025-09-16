@@ -1,19 +1,11 @@
 import { z } from 'zod';
 import type {
-  academicSearchTool,
   codeInterpreterTool,
-  coinDataByContractTool,
-  coinDataTool,
-  coinOhlcTool,
   currencyConverterTool,
-  redditSearchTool,
   retrieveTool,
   trendingMoviesTool,
   textTranslateTool,
-  xSearchTool,
-  stockChartTool,
   webSearchTool,
-  youtubeSearchTool,
   weatherTool,
   findPlaceOnMapTool,
   nearbyPlacesSearchTool,
@@ -104,17 +96,11 @@ export const messageMetadataSchema = z.object({
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 
 type weatherTool = InferUITool<typeof weatherTool>;
-type academicSearchTool = InferUITool<typeof academicSearchTool>;
 type codeInterpreterTool = InferUITool<typeof codeInterpreterTool>;
-type coinDataTool = InferUITool<typeof coinDataTool>;
-type coinOhlcTool = InferUITool<typeof coinOhlcTool>;
 type currencyConverterTool = InferUITool<typeof currencyConverterTool>;
-type redditSearchTool = InferUITool<typeof redditSearchTool>;
 type retrieveTool = InferUITool<typeof retrieveTool>;
 type trendingMoviesTool = InferUITool<typeof trendingMoviesTool>;
 type textTranslateTool = InferUITool<typeof textTranslateTool>;
-type xSearchTool = InferUITool<typeof xSearchTool>;
-type stockChartTool = InferUITool<typeof stockChartTool>;
 type greetingTool = InferUITool<ReturnType<typeof greetingTool>>;
 type flightTrackerTool = InferUITool<typeof flightTrackerTool>;
 type findPlaceOnMapTool = InferUITool<typeof findPlaceOnMapTool>;
@@ -123,24 +109,14 @@ type webSearch = InferUITool<ReturnType<typeof webSearchTool>>;
 type extremeSearch = InferUITool<ReturnType<typeof extremeSearchTool>>;
 type movieTvSearchTool = InferUITool<typeof movieTvSearchTool>;
 type trendingTvTool = InferUITool<typeof trendingTvTool>;
-type youtubeSearchTool = InferUITool<typeof youtubeSearchTool>;
-type coinDataByContractTool = InferUITool<typeof coinDataByContractTool>;
 type datetimeTool = InferUITool<typeof datetimeTool>;
 type mcpSearchTool = InferUITool<typeof mcpSearchTool>;
 
 export type ChatTools = {
-  stock_chart: stockChartTool;
   currency_converter: currencyConverterTool;
-  coin_data: coinDataTool;
-  coin_data_by_contract: coinDataByContractTool;
-  coin_ohlc: coinOhlcTool;
 
   // Search & Content Tools
-  x_search: xSearchTool;
   web_search: webSearch;
-  academic_search: academicSearchTool;
-  youtube_search: youtubeSearchTool;
-  reddit_search: redditSearchTool;
   retrieve: retrieveTool;
 
   // Media & Entertainment

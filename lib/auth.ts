@@ -82,16 +82,16 @@ export const auth = betterAuth({
   }),
   socialProviders: {
     github: {
-      clientId: serverEnv.GITHUB_CLIENT_ID,
-      clientSecret: serverEnv.GITHUB_CLIENT_SECRET,
+      clientId: serverEnv.GITHUB_CLIENT_ID || '',
+      clientSecret: serverEnv.GITHUB_CLIENT_SECRET || '',
     },
     google: {
-      clientId: serverEnv.GOOGLE_CLIENT_ID,
-      clientSecret: serverEnv.GOOGLE_CLIENT_SECRET,
+      clientId: serverEnv.GOOGLE_CLIENT_ID || '',
+      clientSecret: serverEnv.GOOGLE_CLIENT_SECRET || '',
     },
     twitter: {
-      clientId: serverEnv.TWITTER_CLIENT_ID,
-      clientSecret: serverEnv.TWITTER_CLIENT_SECRET,
+      clientId: serverEnv.TWITTER_CLIENT_ID || '',
+      clientSecret: serverEnv.TWITTER_CLIENT_SECRET || '',
     },
   },
   pluginRoutes: {

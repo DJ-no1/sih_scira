@@ -14,7 +14,7 @@ const googleProvider = createGoogleGenerativeAI({
   fetch: (url, options = {}) => {
     return fetch(url, {
       ...options,
-      signal: AbortSignal.timeout(380000), // 6.3 minutes timeout for Google requests
+      signal: AbortSignal.timeout(400000), // Match enhanced-fetch timeout
       // @ts-ignore - Node.js fetch may not support agent in all environments
       agent: url.toString().startsWith('https:') ? httpsAgent : httpAgent,
     });

@@ -14,19 +14,42 @@ if (originalFetch) {
             signal: init?.signal || AbortSignal.timeout(400000), // 6.6 minutes
         };
 
-        // Add custom headers for keep-alive
+        // Only set basic headers without manual Keep-Alive configuration
         const headers = new Headers(init?.headers);
-        headers.set('Connection', 'keep-alive');
-        headers.set('Keep-Alive', 'timeout=400, max=1000');
+        // Remove manual Keep-Alive headers that cause conflicts
         enhancedInit.headers = headers;
 
         console.log(`🌐 Enhanced fetch called for: ${typeof input === 'string' ? input : input.toString()}`);
         console.log(`⏱️  Timeout set to: ${400000}ms (6.6 minutes)`);
 
         try {
-            return await originalFetch(input, enhancedInit);
-        } catch (error) {
-            console.error('🔥 Enhanced fetch error:', error);
+            const response = await originalFetch(input, enhancedInit);
+            console.log(`✅ Enhanced fetch successful for: ${typeof input === 'string' ? input : input.toString()}`);
+            return response;
+        } catch (error: unknown) {
+            const url = typeof input === 'string' ? input : input.toString();
+            console.error('🔥 Enhanced fetch error for:', url);
+
+            // Type guard for Error objects
+            const isError = error instanceof Error;
+            const errorDetails = {
+                name: isError ? error.name : 'Unknown',
+                message: isError ? error.message : String(error),
+                cause: isError ? (error as any).cause : undefined,
+                stack: isError ? error.stack?.split('\n').slice(0, 3).join('\n') : undefined
+            };
+
+            console.error('🔥 Error details:', errorDetails);
+
+            // Enhance error message for better debugging
+            if (isError && (error.name === 'AbortError' || error.message.includes('timeout'))) {
+                console.error('🕐 Request timed out after 6.6 minutes');
+                const timeoutError = new Error(`Request timeout: ${url} took longer than 6.6 minutes to respond`);
+                timeoutError.name = 'TimeoutError';
+                (timeoutError as any).cause = error;
+                throw timeoutError;
+            }
+
             throw error;
         }
     };
@@ -50,6 +73,16 @@ if (typeof XMLHttpRequest !== 'undefined') {
         if (this.timeout === 0) {
             this.timeout = 400000; // 6.6 minutes
         }
+
+        // Add error event listener for better debugging
+        this.addEventListener('timeout', () => {
+            console.error('🕐 XMLHttpRequest timeout after 6.6 minutes');
+        });
+
+        this.addEventListener('error', (event) => {
+            console.error('🔥 XMLHttpRequest error:', event);
+        });
+
         console.log(`🌐 XMLHttpRequest timeout set to: ${this.timeout}ms`);
         return originalSend.call(this, body);
     };
@@ -61,6 +94,6 @@ if (typeof XMLHttpRequest !== 'undefined') {
 export const ENHANCED_TIMEOUT_CONFIG = {
     fetchTimeout: 400000, // 6.6 minutes
     xhrTimeout: 400000,   // 6.6 minutes
-    keepAliveTimeout: 400, // 400 seconds
-    maxConnections: 1000,
+    headers: 300000,      // 5 minutes
+    body: 300000,         // 5 minutes
 };

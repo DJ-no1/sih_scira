@@ -61,154 +61,15 @@ const TMDBResult = lazy(() => import('@/components/movie-info'));
 const MultiSearch = lazy(() => import('@/components/multi-search'));
 const NearbySearchMapView = lazy(() => import('@/components/nearby-search-map-view'));
 const TrendingResults = lazy(() => import('@/components/trending-tv-movies-results'));
-const AcademicPapersCard = lazy(() => import('@/components/academic-papers'));
 const WeatherChart = lazy(() => import('@/components/weather-chart'));
 const MCPServerList = lazy(() => import('@/components/mcp-server-list'));
-const RedditSearch = lazy(() => import('@/components/reddit-search'));
-const XSearch = lazy(() => import('@/components/x-search'));
 const ExtremeSearch = lazy(() =>
   import('@/components/extreme-search').then((module) => ({ default: module.ExtremeSearch })),
-);
-const CryptoCoinsData = lazy(() =>
-  import('@/components/crypto-coin-data').then((module) => ({ default: module.CoinData })),
 );
 const CurrencyConverter = lazy(() =>
   import('@/components/currency_conv').then((module) => ({ default: module.CurrencyConverter })),
 );
-const InteractiveStockChart = lazy(() => import('@/components/interactive-stock-chart'));
 
-// Realistic animated loader component for stock chart
-const StockChartLoader = ({ title, input }: { title?: string; input?: any }) => {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
-  const [startTime] = useState(Date.now());
-
-  // Define realistic steps with expected durations
-  const allSteps = [
-    { id: 0, label: 'Stock prices', color: 'bg-emerald-500', duration: 2000, always: true, source: 'Valyu' },
-    { id: 1, label: 'Financial reports', color: 'bg-amber-500', duration: 3000, always: true, source: 'Exa' },
-    { id: 2, label: 'Market news', color: 'bg-purple-500', duration: 2500, always: true, source: 'Tavily' },
-    {
-      id: 3,
-      label: 'Company statistics',
-      color: 'bg-cyan-500',
-      duration: 1500,
-      show: input?.include_statistics,
-      source: 'Valyu',
-    },
-    {
-      id: 4,
-      label: 'Financial statements',
-      color: 'bg-indigo-500',
-      duration: 2000,
-      show: input?.include_balance_sheet || input?.include_income_statement || input?.include_cash_flow,
-      source: 'Valyu',
-    },
-    {
-      id: 5,
-      label: 'Dividend history',
-      color: 'bg-green-500',
-      duration: 1800,
-      show: input?.include_dividends,
-      source: 'Valyu',
-    },
-    {
-      id: 6,
-      label: 'Insider trades',
-      color: 'bg-blue-500',
-      duration: 2200,
-      show: input?.include_insider_transactions,
-      source: 'Valyu',
-    },
-    {
-      id: 7,
-      label: 'SEC filings',
-      color: 'bg-red-500',
-      duration: 4000,
-      show: input?.filing_types && input.filing_types.length > 0,
-      source: 'Valyu',
-    },
-    {
-      id: 8,
-      label: 'Market movers',
-      color: 'bg-orange-500',
-      duration: 1000,
-      show: input?.include_market_movers,
-      source: 'Valyu',
-    },
-  ];
-
-  const steps = allSteps.filter((step) => step.always || step.show);
-
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    let stepStartTime = Date.now();
-
-    const advanceStep = () => {
-      setCurrentStep((prev) => {
-        if (prev < steps.length - 1) {
-          setCompletedSteps((prevCompleted) => {
-            const newCompleted = new Set(prevCompleted);
-            newCompleted.add(prev);
-            return newCompleted;
-          });
-
-          const nextStep = prev + 1;
-          stepStartTime = Date.now();
-
-          // Schedule next step
-          timeoutId = setTimeout(advanceStep, steps[nextStep]?.duration || 2000);
-
-          return nextStep;
-        }
-        return prev;
-      });
-    };
-
-    // Start first step
-    if (steps.length > 0) {
-      timeoutId = setTimeout(advanceStep, steps[0]?.duration || 2000);
-    }
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [steps]);
-
-  const currentStepData = steps[currentStep];
-  const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-
-  return (
-    <div className="flex flex-col gap-3 w-full mt-4">
-      <Badge
-        variant="secondary"
-        className={cn(
-          'w-fit flex items-center gap-3 px-4 py-2 rounded-full transition-colors duration-200',
-          'bg-blue-200 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
-        )}
-      >
-        <TrendingUpIcon className="h-4 w-4" />
-        <span className="font-medium">
-          {title || 'Loading Stock Chart'}
-          {currentStepData && ` • Fetching ${currentStepData.label.toLowerCase()}`}
-        </span>
-        <Loader2 className="h-4 w-4 animate-spin" />
-      </Badge>
-    </div>
-  );
-};
-const CryptoChart = lazy(() =>
-  import('@/components/crypto-charts').then((module) => ({ default: module.CryptoChart })),
-);
-const OnChainCryptoComponents = lazy(() =>
-  import('@/components/onchain-crypto-components').then((module) => ({ default: module.OnChainTokenPrice })),
-);
-const CryptoTickers = lazy(() =>
-  import('@/components/crypto-charts').then((module) => ({ default: module.CryptoTickers })),
-);
-const YouTubeSearchResults = lazy(() =>
-  import('@/components/youtube-search-results').then((module) => ({ default: module.YouTubeSearchResults })),
-);
 const CodeInterpreterView = lazy(() =>
   import('@/components/tool-invocation-list-view').then((module) => ({ default: module.CodeInterpreterView })),
 );
@@ -409,7 +270,13 @@ export const MessagePartRenderer = memo<MessagePartRendererProps>(
                           }}
                           className="size-8 p-0 rounded-full"
                         >
-                          <HugeiconsIcon icon={RepeatIcon} size={32} color="currentColor" strokeWidth={2} />
+                          <HugeiconsIcon
+                            icon={RepeatIcon}
+                            size={32}
+                            color="currentColor"
+                            strokeWidth={2}
+                            suppressHydrationWarning
+                          />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Rewrite</TooltipContent>
@@ -443,7 +310,13 @@ export const MessagePartRenderer = memo<MessagePartRendererProps>(
                         }}
                         className="size-8 p-0 rounded-full"
                       >
-                        <HugeiconsIcon icon={Copy01Icon} size={32} color="currentColor" strokeWidth={2} />
+                        <HugeiconsIcon
+                          icon={Copy01Icon}
+                          size={32}
+                          color="currentColor"
+                          strokeWidth={2}
+                          suppressHydrationWarning
+                        />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Copy</TooltipContent>
@@ -459,7 +332,13 @@ export const MessagePartRenderer = memo<MessagePartRendererProps>(
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="flex items-center gap-1 text-xs text-primary-foreground bg-primary rounded-md px-2 py-0.75">
-                            <HugeiconsIcon icon={CpuIcon} size={12} color="currentColor" strokeWidth={2} />
+                            <HugeiconsIcon
+                              icon={CpuIcon}
+                              size={12}
+                              color="currentColor"
+                              strokeWidth={2}
+                              suppressHydrationWarning
+                            />
                             <span className="hidden xs:inline">{modelLabel}</span>
                             <span className="xs:hidden">{modelLabel.split('-')[0]}</span>
                           </div>
@@ -1003,21 +882,6 @@ const ToolPartRenderer = memo(
         }
         break;
 
-      case 'academic_search':
-        switch (part.state) {
-          case 'input-streaming':
-            return <div className="text-sm text-neutral-500">Preparing academic search...</div>;
-          case 'input-available':
-            return <SearchLoadingState icon={Book} text="Searching academic papers..." color="violet" />;
-          case 'output-available':
-            return (
-              <Suspense fallback={<ComponentLoader />}>
-                <AcademicPapersCard results={part.output.results} />
-              </Suspense>
-            );
-        }
-        break;
-
       case 'get_weather_data':
         switch (part.state) {
           case 'input-streaming':
@@ -1079,51 +943,6 @@ const ToolPartRenderer = memo(
             return (
               <Suspense fallback={<ComponentLoader />}>
                 <WeatherChart result={part.output} />
-              </Suspense>
-            );
-        }
-        break;
-
-      case 'stock_chart':
-        switch (part.state) {
-          case 'input-streaming':
-            return (
-              <div className="flex items-center gap-3 w-full mt-4 p-3 bg-muted/30 rounded-lg border border-border/40">
-                <TrendingUpIcon className="h-4 w-4 text-primary/80" />
-                <span className="text-sm text-muted-foreground">Preparing financial analysis...</span>
-              </div>
-            );
-          case 'input-available':
-            return <StockChartLoader title={part.input?.title} input={part.input} />;
-          case 'output-available':
-            return (
-              <Suspense fallback={<ComponentLoader />}>
-                <InteractiveStockChart
-                  title={part.input.title}
-                  chart={{
-                    ...part.output.chart,
-                    x_scale: 'datetime',
-                  }}
-                  data={part.output.chart.elements}
-                  stock_symbols={part.input.stock_symbols}
-                  currency_symbols={
-                    part.output.currency_symbols ||
-                    part.input.currency_symbols ||
-                    part.input.stock_symbols?.map(() => 'USD') || ['USD']
-                  }
-                  interval={part.input.time_period || part.input.interval || '1 year'}
-                  resolved_companies={part.output.resolved_companies}
-                  earnings_data={part.output.earnings_data}
-                  news_results={part.output.news_results}
-                  sec_filings={part.output.sec_filings}
-                  company_statistics={part.output.company_statistics}
-                  balance_sheets={part.output.balance_sheets}
-                  income_statements={part.output.income_statements}
-                  cash_flows={part.output.cash_flows}
-                  dividends_data={part.output.dividends_data}
-                  insider_transactions={part.output.insider_transactions}
-                  market_movers={part.output.market_movers}
-                />
               </Suspense>
             );
         }
@@ -1508,51 +1327,6 @@ const ToolPartRenderer = memo(
                   </CardContent>
                 </Card>
               </div>
-            );
-        }
-        break;
-
-      case 'reddit_search':
-        switch (part.state) {
-          case 'input-streaming':
-            return <div className="text-sm text-neutral-500">Preparing Reddit search...</div>;
-          case 'input-available':
-            return <SearchLoadingState icon={RedditLogo} text="Searching Reddit..." color="orange" />;
-          case 'output-available':
-            return (
-              <Suspense fallback={<ComponentLoader />}>
-                <RedditSearch result={part.output} args={part.input} />
-              </Suspense>
-            );
-        }
-        break;
-
-      case 'x_search':
-        switch (part.state) {
-          case 'input-streaming':
-            return <div className="text-sm text-neutral-500">Preparing X search...</div>;
-          case 'input-available':
-            return <SearchLoadingState icon={XLogo} text="Searching X (Twitter)..." color="gray" />;
-          case 'output-available':
-            return (
-              <Suspense fallback={<ComponentLoader />}>
-                <XSearch result={part.output} args={part.input} />
-              </Suspense>
-            );
-        }
-        break;
-
-      case 'youtube_search':
-        switch (part.state) {
-          case 'input-streaming':
-            return <div className="text-sm text-neutral-500">Preparing YouTube search...</div>;
-          case 'input-available':
-            return <SearchLoadingState icon={YoutubeIcon} text="Searching YouTube..." color="red" />;
-          case 'output-available':
-            return (
-              <Suspense fallback={<ComponentLoader />}>
-                <YouTubeSearchResults results={part.output} />
-              </Suspense>
             );
         }
         break;
@@ -1952,115 +1726,6 @@ const ToolPartRenderer = memo(
           case 'input-available':
           case 'output-available':
             return <TranslationTool args={part.input} result={part.output} />;
-        }
-        break;
-
-      case 'coin_tickers':
-        switch (part.state) {
-          case 'input-streaming':
-            return <div className="text-sm text-neutral-500">Preparing crypto ticker data...</div>;
-          case 'input-available':
-            return <SearchLoadingState icon={DollarSign} text="Fetching crypto ticker data..." color="orange" />;
-          case 'output-available':
-            return (
-              <Suspense fallback={<ComponentLoader />}>
-                <CryptoTickers result={part.output} coinId={part.input.coinId} />
-              </Suspense>
-            );
-        }
-        break;
-
-      case 'coin_chart_range':
-        switch (part.state) {
-          case 'input-streaming':
-            return <div className="text-sm text-neutral-500">Preparing crypto chart...</div>;
-          case 'input-available':
-            return <SearchLoadingState icon={TrendingUpIcon} text="Loading crypto price chart..." color="blue" />;
-          case 'output-available':
-            return (
-              <Suspense fallback={<ComponentLoader />}>
-                <CryptoChart result={part.output} coinId={part.input.coinId} chartType="candlestick" />
-              </Suspense>
-            );
-        }
-        break;
-
-      case 'coin_ohlc':
-        switch (part.state) {
-          case 'input-streaming':
-            return <div className="text-sm text-neutral-500">Preparing OHLC data...</div>;
-          case 'input-available':
-            return <SearchLoadingState icon={TrendingUpIcon} text="Loading OHLC candlestick data..." color="green" />;
-          case 'output-available':
-            return (
-              <Suspense fallback={<ComponentLoader />}>
-                <CryptoChart result={part.output} coinId={part.input.coinId} chartType="candlestick" />
-              </Suspense>
-            );
-        }
-        break;
-
-      case 'contract_chart':
-        switch (part.state) {
-          case 'input-streaming':
-            return <div className="text-sm text-neutral-500">Preparing contract chart...</div>;
-          case 'input-available':
-            return <SearchLoadingState icon={TrendingUpIcon} text="Loading contract chart data..." color="violet" />;
-          case 'output-available':
-            return (
-              <Suspense fallback={<ComponentLoader />}>
-                <CryptoChart result={part.output} coinId={part.input.contractAddress} chartType="line" />
-              </Suspense>
-            );
-        }
-        break;
-
-      case 'coin_data':
-        switch (part.state) {
-          case 'input-streaming':
-            return <div className="text-sm text-neutral-500">Preparing coin data...</div>;
-          case 'input-available':
-            return <SearchLoadingState icon={DollarSign} text="Fetching comprehensive coin data..." color="blue" />;
-          case 'output-available':
-            return (
-              <Suspense fallback={<ComponentLoader />}>
-                <CryptoCoinsData result={part.output} coinId={part.input.coinId} />
-              </Suspense>
-            );
-        }
-        break;
-
-      case 'coin_data_by_contract':
-        switch (part.state) {
-          case 'input-streaming':
-            return <div className="text-sm text-neutral-500">Preparing token data...</div>;
-          case 'input-available':
-            return <SearchLoadingState icon={DollarSign} text="Fetching token data by contract..." color="violet" />;
-          case 'output-available':
-            return (
-              <Suspense fallback={<ComponentLoader />}>
-                <CryptoCoinsData result={part.output} contractAddress={part.input.contractAddress} />
-              </Suspense>
-            );
-        }
-        break;
-
-      case 'onchain_token_price':
-        switch (part.state) {
-          case 'input-streaming':
-            return <div className="text-sm text-neutral-500">Preparing onchain token prices...</div>;
-          case 'input-available':
-            return <SearchLoadingState icon={DollarSign} text="Fetching onchain token prices..." color="blue" />;
-          case 'output-available':
-            return (
-              <Suspense fallback={<ComponentLoader />}>
-                <OnChainCryptoComponents
-                  result={part.output}
-                  network={part.input.network}
-                  addresses={part.input.addresses}
-                />
-              </Suspense>
-            );
         }
         break;
 

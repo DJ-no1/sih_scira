@@ -151,16 +151,19 @@ export function isModelError(error: ChatSDKError): boolean {
 }
 
 export function isSignInRequired(error: ChatSDKError): boolean {
+  if (!error || !error.type || !error.surface) return false;
   return (
     error.type === 'unauthorized' && (error.surface === 'auth' || error.surface === 'chat' || error.surface === 'model')
   );
 }
 
 export function isProRequired(error: ChatSDKError): boolean {
+  if (!error || !error.type) return false;
   return error.type === 'upgrade_required' || error.type === 'forbidden' || error.type === 'model_restricted';
 }
 
 export function isRateLimited(error: ChatSDKError): boolean {
+  if (!error || !error.type) return false;
   return error.type === 'rate_limit';
 }
 
@@ -169,6 +172,12 @@ export function getErrorActions(error: ChatSDKError): {
   primary?: { label: string; action: string };
   secondary?: { label: string; action: string };
 } {
+  if (!error) {
+    return {
+      primary: { label: 'Try Again', action: 'retry' },
+    };
+  }
+
   if (isSignInRequired(error)) {
     return {
       primary: { label: 'Sign In', action: 'signin' },
@@ -197,6 +206,7 @@ export function getErrorActions(error: ChatSDKError): {
 
 // Helper function to get error icon type
 export function getErrorIcon(error: ChatSDKError): 'warning' | 'error' | 'upgrade' | 'auth' {
+  if (!error) return 'error';
   if (isSignInRequired(error)) return 'auth';
   if (isProRequired(error) || isRateLimited(error)) return 'upgrade';
   if (error.type === 'offline') return 'warning';

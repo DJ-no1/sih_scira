@@ -411,14 +411,8 @@ const UserProfile = memo(
 
         {/* Settings Dialog */}
         <SettingsDialog
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          user={settingsUser}
-          subscriptionData={subscriptionData}
-          isProUser={isProUser}
-          isProStatusLoading={isProStatusLoading}
-          isCustomInstructionsEnabled={isCustomInstructionsEnabled}
-          setIsCustomInstructionsEnabled={setIsCustomInstructionsEnabled}
+          isOpen={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
         />
       </>
     );

@@ -86,14 +86,24 @@ const EnhancedErrorDisplay: React.FC<EnhancedErrorDisplayProps> = ({
     }
   }
 
+  // Ensure parsedError has default values if it's null
+  if (!parsedError) {
+    parsedError = {
+      type: 'unknown',
+      surface: 'chat',
+      message: 'An unknown error occurred',
+      cause: null,
+    };
+  }
+
   // Get error details
   const errorIcon = getErrorIcon(parsedError as any);
   const errorMessage = isChatSDKError
     ? parsedError.message
     : typeof error === 'string'
       ? error
-      : (error as any).message || 'Something went wrong while processing your message';
-  const errorCause = isChatSDKError ? parsedError.cause : typeof error === 'string' ? undefined : (error as any).cause;
+      : (error as any)?.message || 'Something went wrong while processing your message';
+  const errorCause = isChatSDKError ? parsedError.cause : typeof error === 'string' ? undefined : (error as any)?.cause;
   const errorCode = isChatSDKError ? `${parsedError.type}:${parsedError.surface}` : null;
   const actions = isChatSDKError
     ? getErrorActions(parsedError as any)

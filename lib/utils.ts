@@ -7,11 +7,9 @@ import {
   AtomicPowerIcon,
   Bitcoin02Icon,
   MicroscopeIcon,
-  NewTwitterIcon,
   RedditIcon,
   YoutubeIcon,
   ChattingIcon,
-  AppleStocksIcon,
 } from '@hugeicons/core-free-icons';
 
 export function cn(...inputs: ClassValue[]) {
@@ -20,11 +18,9 @@ export function cn(...inputs: ClassValue[]) {
 
 export type SearchGroupId =
   | 'web'
-  | 'x'
   | 'academic'
   | 'youtube'
   | 'reddit'
-  | 'stocks'
   | 'chat'
   | 'extreme'
   | 'memory'
@@ -54,20 +50,6 @@ export function getSearchGroups(searchProvider: SearchProvider = 'parallel') {
       name: 'Web',
       description: getWebSearchDescription(searchProvider),
       icon: GlobalSearchIcon,
-      show: true,
-    },
-    {
-      id: 'x' as const,
-      name: 'X',
-      description: 'Search X posts',
-      icon: NewTwitterIcon,
-      show: true,
-    },
-    {
-      id: 'stocks' as const,
-      name: 'Stocks',
-      description: 'Stock and currency information',
-      icon: AppleStocksIcon,
       show: true,
     },
     {

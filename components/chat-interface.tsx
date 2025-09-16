@@ -277,6 +277,8 @@ const ChatInterface = memo(
         }
       },
       onError: (error) => {
+        console.error('Chat error details:', error);
+
         // Don't show toast for ChatSDK errors as they will be handled by the enhanced error display
         if (error instanceof ChatSDKError) {
           console.log('ChatSDK Error:', error.type, error.surface, error.message);
@@ -287,12 +289,33 @@ const ChatInterface = memo(
             });
           }
         } else {
-          // Safely handle error properties that might be undefined
-          const errorCause = error?.cause || '';
+          // Handle different types of errors more specifically
           const errorMessage = error?.message || 'Unknown error occurred';
-          console.error('Chat error:', errorCause, errorMessage);
-          toast.error('An error occurred.', {
-            description: `Oops! An error occurred while processing your request. ${errorCause || errorMessage}`,
+          const errorName = error?.name || '';
+          const errorCause = error?.cause || '';
+
+          console.error('Chat error:', { name: errorName, message: errorMessage, cause: errorCause });
+
+          // Provide specific error messages based on error type
+          let userFriendlyMessage = 'An unexpected error occurred while processing your request.';
+          let description = errorMessage;
+
+          if (errorMessage.toLowerCase().includes('timeout') || errorMessage.toLowerCase().includes('connection timeout')) {
+            userFriendlyMessage = 'Request Timeout';
+            description = 'The request took too long to complete. Please try again.';
+          } else if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('fetch')) {
+            userFriendlyMessage = 'Network Error';
+            description = 'Unable to connect to the server. Please check your internet connection and try again.';
+          } else if (errorMessage.toLowerCase().includes('abort')) {
+            userFriendlyMessage = 'Request Cancelled';
+            description = 'The request was cancelled. Please try again.';
+          } else if (errorMessage.toLowerCase().includes('rate limit')) {
+            userFriendlyMessage = 'Rate Limit Exceeded';
+            description = 'Too many requests. Please wait a moment before trying again.';
+          }
+
+          toast.error(userFriendlyMessage, {
+            description: description,
           });
         }
       },
@@ -619,7 +642,13 @@ const ChatInterface = memo(
                   {/* Header Section */}
                   <div className="text-center px-8 pt-8 pb-6">
                     <div className="inline-flex items-center justify-center w-16 h-16 bg-muted/30 rounded-full mb-6">
-                      <HugeiconsIcon icon={Crown02Icon} size={28} className="text-muted-foreground" strokeWidth={1.5} />
+                      <HugeiconsIcon
+                        icon={Crown02Icon}
+                        size={28}
+                        className="text-muted-foreground"
+                        strokeWidth={1.5}
+                        suppressHydrationWarning
+                      />
                     </div>
                     <h2 className="text-2xl font-semibold text-foreground mb-3 tracking-tight">Daily limit reached</h2>
                   </div>
@@ -645,7 +674,13 @@ const ChatInterface = memo(
                         }}
                         className="w-full h-11 font-semibold text-base"
                       >
-                        <HugeiconsIcon icon={Crown02Icon} size={18} className="mr-2.5" strokeWidth={1.5} />
+                        <HugeiconsIcon
+                          icon={Crown02Icon}
+                          size={18}
+                          className="mr-2.5"
+                          strokeWidth={1.5}
+                          suppressHydrationWarning
+                        />
                         Upgrade to Pro
                       </Button>
                       <Button
@@ -750,6 +785,7 @@ const ChatInterface = memo(
                       color="currentColor"
                       strokeWidth={1.5}
                       className="text-muted-foreground dark:text-muted-foreground"
+                      suppressHydrationWarning
                     />
                     <span className="text-sm text-foreground dark:text-foreground">
                       Daily limit reached ({SEARCH_LIMITS.DAILY_SEARCH_LIMIT} searches used)

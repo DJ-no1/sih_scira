@@ -10,14 +10,14 @@ import https from 'https';
 // Configure global HTTP/HTTPS agents with extended timeouts
 const httpAgent = new http.Agent({
   keepAlive: true,
-  timeout: 300000, // 5 minutes
-  keepAliveMsecs: 30000, // 30 seconds
+  timeout: 400000, // 6.6 minutes - match enhanced-fetch timeout
+  keepAliveMsecs: 60000, // 1 minute
 });
 
 const httpsAgent = new https.Agent({
   keepAlive: true,
-  timeout: 300000, // 5 minutes
-  keepAliveMsecs: 30000, // 30 seconds
+  timeout: 400000, // 6.6 minutes - match enhanced-fetch timeout
+  keepAliveMsecs: 60000, // 1 minute
 });
 
 // Set global defaults
@@ -61,29 +61,21 @@ import { v4 as uuidv4 } from 'uuid';
 import { geolocation } from '@vercel/functions';
 
 import {
-  stockChartTool,
   currencyConverterTool,
-  xSearchTool,
   textTranslateTool,
   webSearchTool,
   movieTvSearchTool,
   trendingMoviesTool,
   trendingTvTool,
-  academicSearchTool,
-  youtubeSearchTool,
   retrieveTool,
   weatherTool,
   codeInterpreterTool,
   findPlaceOnMapTool,
   nearbyPlacesSearchTool,
   flightTrackerTool,
-  coinDataTool,
-  coinDataByContractTool,
-  coinOhlcTool,
   datetimeTool,
   greetingTool,
   mcpSearchTool,
-  redditSearchTool,
   extremeSearchTool,
 } from '@/lib/tools';
 import { OpenAIResponsesProviderOptions } from '@ai-sdk/openai';
@@ -165,27 +157,28 @@ export const maxDuration = 360; // 6 minutes
 export async function POST(req: Request) {
   console.log('🔍 Search API endpoint hit');
 
-  const requestStartTime = Date.now();
-  const { messages, model, group, timezone, id, selectedVisibilityType, isCustomInstructionsEnabled, searchProvider } =
-    await req.json();
-  const { latitude, longitude } = geolocation(req);
+  try {
+    const requestStartTime = Date.now();
+    const { messages, model, group, timezone, id, selectedVisibilityType, isCustomInstructionsEnabled, searchProvider } =
+      await req.json();
+    const { latitude, longitude } = geolocation(req);
 
-  console.log('--------------------------------');
-  console.log('Location: ', latitude, longitude);
-  console.log('--------------------------------');
+    console.log('--------------------------------');
+    console.log('Location: ', latitude, longitude);
+    console.log('--------------------------------');
 
-  console.log('--------------------------------');
-  console.log('Messages: ', messages);
-  console.log('--------------------------------');
+    console.log('--------------------------------');
+    console.log('Messages: ', messages);
+    console.log('--------------------------------');
 
-  console.log('Running with model: ', model.trim());
-  console.log('Group: ', group);
-  console.log('Timezone: ', timezone);
+    console.log('Running with model: ', model.trim());
+    console.log('Group: ', group);
+    console.log('Timezone: ', timezone);
 
-  const userCheckTime = Date.now();
-  console.log('🔍 [DB] Starting getCurrentUser()...');
-  const user = await getCurrentUser();
-  const streamId = 'stream-' + uuidv4();
+    const userCheckTime = Date.now();
+    console.log('🔍 [DB] Starting getCurrentUser()...');
+    const user = await getCurrentUser();
+    const streamId = 'stream-' + uuidv4();
   const userCheckTime2 = (Date.now() - userCheckTime) / 1000;
   dbOperationTimings.push({ operation: 'getCurrentUser', time: userCheckTime2 });
   console.log(`⏱️  [DB] getCurrentUser() took: ${userCheckTime2.toFixed(2)}s`);
@@ -517,7 +510,7 @@ export async function POST(req: Request) {
             // Persist partial results to database
           },
           maxRetries: 3, // Reduced from 10 to avoid long waits
-          abortSignal: AbortSignal.timeout(380000), // 6.3 minutes abort signal (slightly less than client)
+          abortSignal: AbortSignal.timeout(400000), // 6.6 minutes abort signal (match enhanced-fetch timeout)
           ...(model.includes('scira-5')
             ? {
               maxOutputTokens: maxTokens,
@@ -570,19 +563,11 @@ export async function POST(req: Request) {
           },
           tools: (() => {
             const baseTools = {
-              // Stock & Financial Tools
-              stock_chart: stockChartTool,
+              // Financial Tools
               currency_converter: currencyConverterTool,
-              coin_data: coinDataTool,
-              coin_data_by_contract: coinDataByContractTool,
-              coin_ohlc: coinOhlcTool,
 
               // Search & Content Tools
-              x_search: xSearchTool,
               web_search: webSearchTool(dataStream, searchProvider),
-              academic_search: academicSearchTool,
-              youtube_search: youtubeSearchTool,
-              reddit_search: redditSearchTool,
               retrieve: retrieveTool,
 
               // Media & Entertainment
@@ -812,8 +797,57 @@ export async function POST(req: Request) {
   if (streamContext) {
     return new Response(
       await streamContext.resumableStream(streamId, () => stream.pipeThrough(new JsonToSseTransformStream())),
+      {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      }
     );
   } else {
-    return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
+    return new Response(stream.pipeThrough(new JsonToSseTransformStream()), {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache', 
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
+  }
+  } catch (error) {
+    console.error('🔥 API Error:', error);
+    
+    // Handle socket timeout errors specifically
+    if (error instanceof Error && error.message.includes('timeout')) {
+      console.error('🕐 Socket timeout detected');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Request timeout', 
+          message: 'The request timed out. Please try again.' 
+        }),
+        { 
+          status: 408,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
+    // Handle other errors
+    return new Response(
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        message: 'An unexpected error occurred. Please try again.' 
+      }),
+      { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
   }
 }
