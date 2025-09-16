@@ -16,9 +16,9 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import PlaceholderImage from '@/components/placeholder-image';
@@ -147,6 +147,7 @@ const SourcesSheet: React.FC<{
   return (
     <SheetWrapper open={open} onOpenChange={onOpenChange}>
       <SheetContentWrapper className={cn(isMobile ? 'h-[85vh]' : 'w-[600px] sm:max-w-[600px]', 'p-0')}>
+        <SheetTitle className="sr-only">All Sources</SheetTitle>
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="px-6 py-5 border-b border-neutral-200 dark:border-neutral-800">
@@ -312,6 +313,7 @@ const ImageGallery = React.memo(({ images }: { images: SearchImage[] }) => {
       {/* Image Viewer */}
       <ImageViewer open={isOpen} onOpenChange={setIsOpen}>
         <ImageViewerContent className={viewerContentClassName}>
+          <DialogTitle className="sr-only">Image Viewer</DialogTitle>
           <div className="relative w-full h-full bg-white dark:bg-neutral-900">
             {/* Header */}
             <div className="absolute top-0 left-0 right-0 z-50 p-4 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-sm border-b border-neutral-200 dark:border-neutral-800">
@@ -457,10 +459,10 @@ const LoadingState: React.FC<{
                   {totalResults || '0'}
                 </Badge>
                 {totalResults > 0 && (
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs opacity-50 cursor-not-allowed" disabled>
+                  <div className="inline-flex items-center justify-center h-7 px-2 text-xs rounded-md opacity-50 cursor-not-allowed">
                     View all
                     <ArrowUpRight className="w-3 h-3 ml-1" />
-                  </Button>
+                  </div>
                 )}
                 <ChevronDown
                   className="h-4 w-4 text-neutral-500 shrink-0 transition-transform duration-200"
@@ -662,18 +664,25 @@ const MultiSearch = ({
                   {totalResults}
                 </Badge>
                 {totalResults > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs"
+                  <div
+                    className="inline-flex items-center justify-center h-7 px-2 text-xs rounded-md transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
                       setSourcesOpen(true);
                     }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSourcesOpen(true);
+                      }
+                    }}
                   >
                     View all
                     <ArrowUpRight className="w-3 h-3 ml-1" />
-                  </Button>
+                  </div>
                 )}
                 <ChevronDown
                   className="h-4 w-4 text-neutral-500 shrink-0 transition-transform duration-200"

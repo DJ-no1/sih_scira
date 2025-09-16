@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Film, Tv, Star, Calendar, ChevronRight, X } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/use-media-query';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 
 interface TrendingItem {
@@ -131,7 +131,12 @@ const TrendingResults = ({ result, type }: TrendingResultsProps) => {
 
     return (
       <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
-        <DialogContent className="max-w-3xl! p-0 overflow-hidden">{content}</DialogContent>
+        <DialogContent className="max-w-3xl! p-0 overflow-hidden">
+          <DialogTitle className="sr-only">
+            {selectedItem?.title || selectedItem?.name || 'Media Details'}
+          </DialogTitle>
+          {content}
+        </DialogContent>
       </Dialog>
     );
   };
@@ -162,9 +167,8 @@ const TrendingResults = ({ result, type }: TrendingResultsProps) => {
       </header>
 
       <div
-        className={`grid ${
-          isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4'
-        } px-4 sm:px-0`}
+        className={`grid ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4'
+          } px-4 sm:px-0`}
       >
         {displayedResults.map((item, index) => (
           <motion.div

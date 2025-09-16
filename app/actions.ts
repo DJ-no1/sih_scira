@@ -55,9 +55,9 @@ export async function suggestQuestions(history: any[]) {
   console.log(history);
 
   const { object } = await generateObject({
-    model: scira.languageModel('scira-grok-3'),
+    model: scira.languageModel('scira-google-pro'),
     temperature: 0,
-    maxOutputTokens: 512,
+    maxOutputTokens: 1024,
     system: `You are a search engine follow up query/questions generator. You MUST create EXACTLY 3 questions for the search engine based on the message history.
 
 ### Question Generation Guidelines:
@@ -146,10 +146,6 @@ export async function generateTitleFromUserMessage({ message }: { message: UIMes
 
 export async function enhancePrompt(raw: string) {
   try {
-    const user = await getComprehensiveUserData();
-    if (!user || !user.isProUser) {
-      return { success: false, error: 'Pro subscription required' };
-    }
 
     const system = `You are an expert prompt engineer. You are given a prompt and you need to enhance it.
 
@@ -168,7 +164,7 @@ Guidelines (MANDATORY):
 - Just return the improved prompt text in plain text format, no other text or commentary or markdown or anything else!!`;
 
     const { text } = await generateText({
-      model: scira.languageModel('scira-enhance'),
+      model: scira.languageModel('scira-google-flash-lite'),
       temperature: 0.6,
       topP: 0.95,
       maxOutputTokens: 1024,
@@ -1168,9 +1164,9 @@ export async function getSubDetails() {
 
   return userData.polarSubscription
     ? {
-        hasSubscription: true,
-        subscription: userData.polarSubscription,
-      }
+      hasSubscription: true,
+      subscription: userData.polarSubscription,
+    }
     : { hasSubscription: false };
 }
 
