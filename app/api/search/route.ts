@@ -1,16 +1,39 @@
-// Search API with AI streaming functionality
-import { createUIMessageStream, JsonToSseTransformStream, streamText, convertToModelMessages } from 'ai';
+// /app/api/search/route.ts
+import {
+  convertToModelMessages,
+  streamText,
+  createUIMessageStream,
+  JsonToSseTransformStream,
+} from 'ai';
 import { scira } from '@/ai/providers';
-import { ChatMessage } from '@/lib/types';
 import { geolocation } from '@vercel/functions';
 import {
-  webSearchTool,
-  greetingTool,
-  datetimeTool,
+  currencyConverterTool,
   textTranslateTool,
+  webSearchTool,
+  movieTvSearchTool,
+  trendingMoviesTool,
+  trendingTvTool,
+  retrieveTool,
+  weatherTool,
+  codeInterpreterTool,
+  findPlaceOnMapTool,
+  nearbyPlacesSearchTool,
+  flightTrackerTool,
+  datetimeTool,
+  greetingTool,
+  mcpSearchTool,
+  extremeSearchTool,
 } from '@/lib/tools';
+import { markdownJoinerTransform } from '@/lib/parser';
+import { ChatMessage } from '@/lib/types';
 
 export const maxDuration = 300; // 5 minutes
+
+// Simple stub for stream context since we removed resumable streaming
+export function getStreamContext() {
+  return null;
+}
 
 // Handle CORS preflight requests
 export async function OPTIONS(req: Request) {
@@ -29,12 +52,12 @@ export async function POST(req: Request) {
   console.log('🔍 Search API endpoint hit');
 
   try {
-    console.log('🔍 Parsing request body...');
-    const { messages, model } = await req.json();
-    console.log('🔍 Request parsed - model:', model);
-
+    const { messages, model = 'scira-default', group = 'web', searchProvider = 'parallel', timezone = 'UTC' } = await req.json();
     const { latitude, longitude } = geolocation(req);
-    console.log('🔍 Location extracted:', latitude, longitude);
+
+    console.log('Running with model:', model);
+    console.log('Group:', group);
+    console.log('Location:', latitude, longitude);
 
     // Start streaming response with AI
     const stream = createUIMessageStream<ChatMessage>({
@@ -42,56 +65,90 @@ export async function POST(req: Request) {
         console.log('🚀 Starting AI stream processing...');
 
         const result = streamText({
-          model: scira.languageModel(model || 'scira-default'),
+          model: scira.languageModel(model),
           messages: convertToModelMessages(messages),
-          system: `You are SCIRA, an advanced AI research assistant with comprehensive search and analysis capabilities. Your primary goal is to provide detailed, insightful, and actionable responses based on the most current and relevant information available.
+          system: `You are SCIRA, an advanced AI research assistant designed to provide comprehensive analysis based on search results.
 
-## Core Responsibilities:
-1. **Search & Retrieve**: Use available tools to gather comprehensive, up-to-date information
-2. **Analyze & Synthesize**: Process the retrieved data to extract key insights, trends, and patterns
-3. **Contextualize**: Provide relevant background information and explain the significance of findings
-4. **Actionable Insights**: Offer practical implications, recommendations, and next steps when appropriate
+## CRITICAL WORKFLOW:
+1. When user asks a question, IMMEDIATELY run the appropriate search tool
+2. After getting search results, ALWAYS provide detailed written analysis
+3. NEVER just return raw links or basic summaries
 
-## Response Structure:
-After using search tools, ALWAYS provide:
-- **Executive Summary**: Brief overview of key findings
-- **Detailed Analysis**: In-depth examination of the data with specific insights
-- **Key Trends**: Important patterns or changes identified in the data
-- **Context & Implications**: What this means for the user's query and broader context
-- **Recommendations**: Actionable next steps or areas for further exploration
+## MANDATORY BEHAVIOR AFTER TOOL EXECUTION:
+- Write a comprehensive response analyzing the search results
+- Use markdown formatting with headers and sections
+- Include specific details and insights from the search data
+- Provide citations and sources
+- Give actionable conclusions or recommendations
 
-## Search Behavior:
-- Use multiple search queries to gather comprehensive information
-- Cross-reference data from multiple sources for accuracy
-- Focus on recent, authoritative sources when possible
-- Look for data, statistics, trends, and expert analysis
+## EXAMPLE FLOW:
+User: "What are the current affairs of India?"
+Assistant: [runs web_search tool]
+Assistant: "Based on my comprehensive search of current Indian affairs, here's what's happening:
 
-## Quality Standards:
-- Be specific with numbers, dates, and quantitative data
-- Cite key sources and findings
-- Explain technical concepts in accessible language
-- Highlight uncertainties or data limitations when present
-- Provide balanced perspectives on complex topics
+# Current Affairs in India - ${new Date().toLocaleDateString()}
 
-Remember: Your value lies not just in finding information, but in transforming raw data into meaningful insights that help users understand complex topics and make informed decisions.` + (latitude && longitude ? `\n\nUser location: ${latitude}, ${longitude}` : ''),
+## Major Political Developments
+[Detailed analysis of political news from search results]
+
+## Economic Updates  
+[Analysis of economic developments]
+
+## Social and Cultural News
+[Coverage of social issues and cultural events]
+
+## Key Takeaways
+- [Specific insight 1]
+- [Specific insight 2]
+- [Specific insight 3]
+
+## Sources
+[List of sources with proper citations]"
+
+## TOOLS GUIDELINES:
+- For web searches: Use multiple targeted queries (3-5) for comprehensive coverage
+- Always specify recent timeframes when searching for current affairs
+- Use appropriate search providers based on content type
+- Include relevant location context when available
+
+Today's Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}`
+            + (latitude && longitude ? `\nUser Location: ${latitude}, ${longitude}` : ''),
           tools: {
-            greeting: greetingTool('UTC'),
-            datetime: datetimeTool,
+            // Search & Content Tools
+            web_search: webSearchTool(dataStream, searchProvider),
+            retrieve: retrieveTool,
+
+            // Media & Entertainment
+            movie_or_tv_search: movieTvSearchTool,
+            trending_movies: trendingMoviesTool,
+            trending_tv: trendingTvTool,
+
+            // Location & Maps
+            find_place_on_map: findPlaceOnMapTool,
+            nearby_places_search: nearbyPlacesSearchTool,
+            get_weather_data: weatherTool,
+
+            // Utility Tools
             text_translate: textTranslateTool,
-            web_search: webSearchTool(dataStream), // May have limited functionality due to API keys
+            code_interpreter: codeInterpreterTool,
+            track_flight: flightTrackerTool,
+            datetime: datetimeTool,
+            mcp_search: mcpSearchTool,
+            extreme_search: extremeSearchTool(dataStream),
+            currency_converter: currencyConverterTool,
+            greeting: greetingTool(timezone),
           },
           toolChoice: 'auto',
-          maxRetries: 2,
-          abortSignal: AbortSignal.timeout(240000), // 4 minutes
+          maxRetries: 3,
+          experimental_transform: markdownJoinerTransform(),
           onChunk(event) {
-            if (event.chunk.type === 'text-delta') {
-              console.log('📝 Text chunk received');
-            } else if (event.chunk.type === 'tool-call') {
+            if (event.chunk.type === 'tool-call') {
               console.log('🔧 Tool called:', event.chunk.toolName);
             }
           },
-          onFinish: async (event) => {
+          onFinish(event) {
             console.log('✅ Stream finished:', event.finishReason);
+            console.log('Steps taken:', event.steps?.length || 0);
           },
           onError(event) {
             console.error('❌ Stream error:', event.error);
@@ -103,7 +160,7 @@ Remember: Your value lies not just in finding information, but in transforming r
 
         dataStream.merge(
           result.toUIMessageStream({
-            sendReasoning: true, // This enables reasoning display
+            sendReasoning: true,
             messageMetadata: ({ part }) => {
               if (part.type === 'finish') {
                 return {
@@ -121,11 +178,9 @@ Remember: Your value lies not just in finding information, but in transforming r
       },
       onError(error) {
         console.error('🔥 UI Stream Error:', error);
-        return 'Sorry, an error occurred. Please try again.';
+        return 'Sorry, an error occurred during search. Please try again.';
       },
     });
-
-    console.log('🔍 Returning streaming response...');
 
     return new Response(stream.pipeThrough(new JsonToSseTransformStream()), {
       headers: {
@@ -141,19 +196,6 @@ Remember: Your value lies not just in finding information, but in transforming r
 
   } catch (error) {
     console.error('🔥 API Error:', error);
-
-    if (error instanceof Error && error.message.includes('timeout')) {
-      return new Response(
-        JSON.stringify({
-          error: 'Request timeout',
-          message: 'The request timed out. Please try again.'
-        }),
-        {
-          status: 408,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-    }
 
     return new Response(
       JSON.stringify({

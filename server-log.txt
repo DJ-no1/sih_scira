@@ -1,0 +1,18 @@
+
+> scira@0.1.0 dev C:\Users\Dell\OneDrive\Desktop\Projects at github\sih_scira
+> next dev --turbopack
+
+ ⚠ Port 3000 is in use by an unknown process, using available port 3001 instead.
+   ▲ Next.js 15.5.2 (Turbopack)
+   - Local:        http://localhost:3001
+   - Network:      http://10.239.143.213:3001
+   - Environments: .env.local
+   - Experiments (use with caution):
+     ✓ useCache
+     · staleTimes
+     · serverActions
+     · ...
+
+ ✓ Starting...
+ ✓ Compiled middleware in 141ms
+ ✓ Ready in 1932ms

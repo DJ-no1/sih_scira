@@ -10,7 +10,7 @@ export function useUserData() {
     error,
     refetch,
     isRefetching,
-  } = useQuery({
+  } = useQuery<ComprehensiveUserData | null>({
     queryKey: ['comprehensive-user-data'],
     queryFn: getCurrentUser,
     staleTime: 1000 * 60 * 30, // 30 minutes - matches server cache
@@ -64,23 +64,23 @@ export function useUserData() {
     // Legacy compatibility helpers
     subscriptionData: userData?.polarSubscription
       ? {
-          hasSubscription: true,
-          subscription: userData.polarSubscription,
-        }
+        hasSubscription: true,
+        subscription: userData.polarSubscription,
+      }
       : { hasSubscription: false },
 
     // Map dodoPayments to legacy dodoProStatus structure for settings dialog
     dodoProStatus: userData?.dodoPayments
       ? {
-          isProUser: userData.proSource === 'dodo' && userData.isProUser,
-          hasPayments: userData.dodoPayments.hasPayments,
-          expiresAt: userData.dodoPayments.expiresAt,
-          mostRecentPayment: userData.dodoPayments.mostRecentPayment,
-          daysUntilExpiration: userData.dodoPayments.daysUntilExpiration,
-          isExpired: userData.dodoPayments.isExpired,
-          isExpiringSoon: userData.dodoPayments.isExpiringSoon,
-          source: userData.proSource,
-        }
+        isProUser: userData.proSource === 'dodo' && userData.isProUser,
+        hasPayments: userData.dodoPayments.hasPayments,
+        expiresAt: userData.dodoPayments.expiresAt,
+        mostRecentPayment: userData.dodoPayments.mostRecentPayment,
+        daysUntilExpiration: userData.dodoPayments.daysUntilExpiration,
+        isExpired: userData.dodoPayments.isExpired,
+        isExpiringSoon: userData.dodoPayments.isExpiringSoon,
+        source: userData.proSource,
+      }
       : null,
 
     expiresAt: userData?.dodoPayments?.expiresAt,
