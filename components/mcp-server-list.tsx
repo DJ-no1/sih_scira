@@ -4,7 +4,7 @@ import { Copy, ExternalLink, Server, Database, Network, Code } from 'lucide-reac
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface MCPServer {
   qualifiedName: string;
@@ -147,51 +147,47 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({ servers, query, is
                 {/* Connection badges */}
                 <div className="flex flex-wrap gap-1.5">
                   {server.connections?.map((conn, idx) => (
-                    <TooltipProvider key={`${conn.type}-${idx}`}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Badge
-                            className="bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700! hover:text-neutral-900 dark:hover:text-white border-0 px-2 py-0.5 text-xs flex items-center gap-1 cursor-pointer transition-colors duration-150"
-                            onClick={() => {
-                              if (conn.url) {
-                                navigator.clipboard.writeText(conn.url);
-                                toast.success(`${conn.type} URL copied!`);
-                              }
-                            }}
-                          >
-                            {connectionIcons[conn.type] || connectionIcons.default}
-                            {conn.type}
-                          </Badge>
-                        </TooltipTrigger>
-                        {conn.url && (
-                          <TooltipContent className="max-w-xs">
-                            <code className="text-xs font-mono break-all">{conn.url}</code>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </TooltipProvider>
+                    <Tooltip key={`${conn.type}-${idx}`}>
+                      <TooltipTrigger asChild>
+                        <Badge
+                          className="bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700! hover:text-neutral-900 dark:hover:text-white border-0 px-2 py-0.5 text-xs flex items-center gap-1 cursor-pointer transition-colors duration-150"
+                          onClick={() => {
+                            if (conn.url) {
+                              navigator.clipboard.writeText(conn.url);
+                              toast.success(`${conn.type} URL copied!`);
+                            }
+                          }}
+                        >
+                          {connectionIcons[conn.type] || connectionIcons.default}
+                          {conn.type}
+                        </Badge>
+                      </TooltipTrigger>
+                      {conn.url && (
+                        <TooltipContent className="max-w-xs">
+                          <code className="text-xs font-mono break-all">{conn.url}</code>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
                   ))}
 
                   {server.deploymentUrl && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Badge
-                            className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-800/60 hover:text-emerald-800 dark:hover:text-emerald-200 border-0 px-2 py-0.5 text-xs flex items-center gap-1 cursor-pointer transition-colors duration-150"
-                            onClick={() => {
-                              navigator.clipboard.writeText(server.deploymentUrl!);
-                              toast.success('Deployment URL copied!');
-                            }}
-                          >
-                            <Server className="h-3.5 w-3.5" />
-                            deployed
-                          </Badge>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs">
-                          <code className="text-xs font-mono break-all">{server.deploymentUrl}</code>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge
+                          className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-800/60 hover:text-emerald-800 dark:hover:text-emerald-200 border-0 px-2 py-0.5 text-xs flex items-center gap-1 cursor-pointer transition-colors duration-150"
+                          onClick={() => {
+                            navigator.clipboard.writeText(server.deploymentUrl!);
+                            toast.success('Deployment URL copied!');
+                          }}
+                        >
+                          <Server className="h-3.5 w-3.5" />
+                          deployed
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <code className="text-xs font-mono break-all">{server.deploymentUrl}</code>
+                      </TooltipContent>
+                    </Tooltip>
                   )}
                 </div>
 

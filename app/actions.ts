@@ -1574,7 +1574,7 @@ export async function createScheduledLookout({
     // Check daily lookout limit specifically
     if (frequency === 'daily') {
       const activeDailyLookouts = existingLookouts.filter(
-        (lookout) => lookout.frequency === 'daily' && lookout.status === 'active',
+        (lookout:any) => lookout.frequency === 'daily' && lookout.status === 'active',
       );
       if (activeDailyLookouts.length >= 5) {
         throw new Error('You have reached the maximum limit of 5 active daily lookouts');
@@ -1721,7 +1721,7 @@ export async function getUserLookouts() {
     const lookouts = await getLookoutsByUserId({ userId: user.id });
 
     // Update next run times for active lookouts
-    const updatedLookouts = lookouts.map((lookout) => {
+    const updatedLookouts = lookouts.map((lookout:any) => {
       if (lookout.status === 'active' && lookout.cronSchedule && lookout.frequency !== 'once') {
         try {
           const nextRunAt = calculateNextRun(lookout.cronSchedule, lookout.timezone);
@@ -1823,7 +1823,7 @@ export async function updateLookoutAction({
     if (frequency === 'daily' && lookout.frequency !== 'daily') {
       const existingLookouts = await getLookoutsByUserId({ userId: user.id });
       const activeDailyLookouts = existingLookouts.filter(
-        (existingLookout) =>
+        (existingLookout:any) =>
           existingLookout.frequency === 'daily' && existingLookout.status === 'active' && existingLookout.id !== id,
       );
       if (activeDailyLookouts.length >= 5) {

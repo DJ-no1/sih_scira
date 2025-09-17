@@ -694,7 +694,7 @@ export function ChatHistoryDialog({ open, onOpenChange, user }: ChatHistoryDialo
         className={cn(
           'flex items-center py-2.5 px-3 mx-1 my-0.5 rounded-md transition-all duration-200 ease-in-out',
           isDeleting &&
-            'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 shadow-sm',
+          'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 shadow-sm',
           isEditing && 'bg-muted/30 dark:bg-muted/20 border border-muted-foreground/20 shadow-sm',
           !isDeleting && !isEditing && 'hover:bg-muted/50 border border-transparent',
         )}
@@ -838,7 +838,7 @@ export function ChatHistoryDialog({ open, onOpenChange, user }: ChatHistoryDialo
                       updateTitleMutation.isPending ||
                       !!deletingChatId ||
                       !!editingChatId) &&
-                      'opacity-50 pointer-events-none',
+                    'opacity-50 pointer-events-none',
                   )}
                   onClick={(e) => handleEditTitle(e, chat.id, chat.title)}
                   aria-label={`Edit title of ${displayTitle}`}
@@ -864,7 +864,7 @@ export function ChatHistoryDialog({ open, onOpenChange, user }: ChatHistoryDialo
                       updateTitleMutation.isPending ||
                       !!deletingChatId ||
                       !!editingChatId) &&
-                      'opacity-50 pointer-events-none',
+                    'opacity-50 pointer-events-none',
                   )}
                   onClick={(e) => handleDeleteChat(e, chat.id, chat.title)}
                   aria-label={`Delete ${displayTitle}`}
@@ -1108,16 +1108,14 @@ export function ChatHistoryButton({ onClickAction }: { onClickAction: () => void
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
+          type="button"
           onClick={onClickAction}
-          className="size-6 !p-0 !m-0 rounded-full hover:bg-muted"
+          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:bg-muted dark:hover:bg-accent/50 size-6 !p-0 !m-0"
           aria-label="Chat History"
         >
           <HugeiconsIcon icon={SearchList02Icon} className="size-6" />
-          <span className="sr-only">Chat History</span>
-        </Button>
+        </button>
       </TooltipTrigger>
       <TooltipContent side="bottom" sideOffset={4}>
         Chat History

@@ -34,6 +34,7 @@ import { after } from 'next/server';
 import { CustomInstructions } from '@/lib/db/schema';
 import { v4 as uuidv4 } from 'uuid';
 import { geolocation } from '@vercel/functions';
+import { withTimeoutAndRetry } from '@/lib/db/timeout-wrapper';
 
 import {
   stockChartTool,
@@ -156,7 +157,12 @@ export async function POST(req: Request) {
 
   const userCheckTime = Date.now();
   console.log('🔍 [DB] Starting getCurrentUser()...');
-  const user = await getCurrentUser();
+  const user = await withTimeoutAndRetry(
+    () => getCurrentUser(),
+    100000, // 100 second timeout
+    2, // 2 retries
+    'getCurrentUser'
+  );
   const streamId = 'stream-' + uuidv4();
   const userCheckTime2 = (Date.now() - userCheckTime) / 1000;
   dbOperationTimings.push({ operation: 'getCurrentUser', time: userCheckTime2 });
@@ -193,7 +199,12 @@ export async function POST(req: Request) {
     try {
       const getChatStartTime = Date.now();
       console.log('🔍 [DB] Starting getChatById() for testing...');
-      const existingChat = await getChatById({ id });
+      const existingChat = await withTimeoutAndRetry(
+        () => getChatById({ id }),
+        80000, // 8 second timeout
+        2, // 2 retries
+        'getChatById'
+      );
       const getChatTime = (Date.now() - getChatStartTime) / 1000;
       dbOperationTimings.push({ operation: 'getChatById', time: getChatTime });
       console.log(`⏱️  [DB] getChatById() took: ${getChatTime.toFixed(2)}s`);
@@ -201,12 +212,17 @@ export async function POST(req: Request) {
         // Create chat immediately with a temporary title to avoid blocking the request
         const saveChatStartTime = Date.now();
         console.log('🔍 [DB] Starting saveChat()...');
-        await saveChat({
-          id,
-          userId: user.id,
-          title: 'New Chat', // Temporary title
-          visibility: selectedVisibilityType,
-        });
+        await withTimeoutAndRetry(
+          () => saveChat({
+            id,
+            userId: user.id,
+            title: 'New Chat', // Temporary title
+            visibility: selectedVisibilityType,
+          }),
+          80080, // 8 second timeout
+          2, // 2 retries
+          'saveChat'
+        );
         const saveChatTime = (Date.now() - saveChatStartTime) / 1000;
         dbOperationTimings.push({ operation: 'saveChat', time: saveChatTime });
         console.log(`⏱️  [DB] saveChat() took: ${saveChatTime.toFixed(2)}s`);
@@ -240,7 +256,12 @@ export async function POST(req: Request) {
       // Create stream record as early as possible for resumable streaming
       const createStreamStartTime = Date.now();
       console.log('🔍 [DB] Starting createStreamId()...');
-      await createStreamId({ streamId, chatId: id });
+      await withTimeoutAndRetry(
+        () => createStreamId({ streamId, chatId: id }),
+        50000, // 5 second timeout
+        2, // 2 retries
+        'createStreamId'
+      );
       const createStreamTime = (Date.now() - createStreamStartTime) / 1000;
       dbOperationTimings.push({ operation: 'createStreamId', time: createStreamTime });
       console.log(`⏱️  [DB] createStreamId() took: ${createStreamTime.toFixed(2)}s`);
@@ -293,9 +314,9 @@ export async function POST(req: Request) {
           isProUser: false,
           subscriptionData: user.polarSubscription
             ? {
-                hasSubscription: true,
-                subscription: { ...user.polarSubscription, organizationId: null },
-              }
+              hasSubscription: true,
+              subscription: { ...user.polarSubscription, organizationId: null },
+            }
             : { hasSubscription: false },
           shouldBypassLimits,
           extremeSearchUsage: extremeSearchUsage.count,
@@ -315,9 +336,9 @@ export async function POST(req: Request) {
         isProUser: true,
         subscriptionData: user.polarSubscription
           ? {
-              hasSubscription: true,
-              subscription: { ...user.polarSubscription, organizationId: null },
-            }
+            hasSubscription: true,
+            subscription: { ...user.polarSubscription, organizationId: null },
+          }
           : { hasSubscription: false },
         shouldBypassLimits: true,
         extremeSearchUsage: 0,
@@ -450,35 +471,35 @@ export async function POST(req: Request) {
         messages: convertToModelMessages(messages),
         ...(model.includes('scira-qwen-32b')
           ? {
-              temperature: 0.6,
-              topP: 0.95,
-              minP: 0,
-            }
+            temperature: 0.6,
+            topP: 0.95,
+            minP: 0,
+          }
           : model.includes('scira-qwen-235')
             ? {
+              temperature: 0.7,
+              topP: 0.8,
+              minP: 0,
+            }
+            : model.includes('scira-qwen-30')
+              ? {
                 temperature: 0.7,
                 topP: 0.8,
                 minP: 0,
               }
-            : model.includes('scira-qwen-30')
-              ? {
-                  temperature: 0.7,
-                  topP: 0.8,
-                  minP: 0,
-                }
               : model.includes('scira-qwen-235-think')
                 ? {
-                    temperature: 0.6,
-                    topP: 0.95,
-                    topK: 20,
-                    minP: 0,
-                  }
+                  temperature: 0.6,
+                  topP: 0.95,
+                  topK: 20,
+                  minP: 0,
+                }
                 : model.includes('scira-qwen-30-think')
                   ? {
-                      temperature: 0.6,
-                      topP: 0.95,
-                      minP: 0,
-                    }
+                    temperature: 0.6,
+                    topP: 0.95,
+                    minP: 0,
+                  }
                   : {}),
         stopWhen: stepCountIs(5),
         onAbort: ({ steps }) => {
@@ -489,8 +510,8 @@ export async function POST(req: Request) {
         maxRetries: 10,
         ...(model.includes('scira-5')
           ? {
-              maxOutputTokens: maxTokens,
-            }
+            maxOutputTokens: maxTokens,
+          }
           : {}),
         activeTools: [...activeTools],
         experimental_transform: markdownJoinerTransform(),
@@ -505,32 +526,32 @@ export async function POST(req: Request) {
           openai: {
             ...(model.includes('scira-5')
               ? {
-                  reasoningEffort: model === 'scira-5-high' ? 'high' : 'minimal',
-                  reasoningSummary: model === 'scira-5-high' ? 'detailed' : 'auto',
-                  parallelToolCalls: false,
-                  strictJsonSchema: false,
-                  serviceTier: 'auto',
-                  textVerbosity: 'high',
-                }
+                reasoningEffort: model === 'scira-5-high' ? 'high' : 'minimal',
+                reasoningSummary: model === 'scira-5-high' ? 'detailed' : 'auto',
+                parallelToolCalls: false,
+                strictJsonSchema: false,
+                serviceTier: 'auto',
+                textVerbosity: 'high',
+              }
               : {}),
           } satisfies OpenAIResponsesProviderOptions,
           xai: {
             ...(model === 'scira-default'
               ? {
-                  reasoningEffort: 'low',
-                }
+                reasoningEffort: 'low',
+              }
               : {}),
           } satisfies XaiProviderOptions,
           groq: {
             ...(model === 'scira-gpt-oss-20' || model === 'scira-gpt-oss-120'
               ? {
-                  reasoningEffort: 'high',
-                }
+                reasoningEffort: 'high',
+              }
               : {}),
             ...(model === 'scira-qwen-32b'
               ? {
-                  reasoningEffort: 'none',
-                }
+                reasoningEffort: 'none',
+              }
               : {}),
             parallelToolCalls: false,
             structuredOutputs: true,
@@ -642,7 +663,15 @@ export async function POST(req: Request) {
           console.log('reasoning details: ', event.reasoning);
           console.log('Steps: ', event.steps);
           console.log('Messages: ', event.response.messages);
-          console.log('Message content: ', event.response.messages[event.response.messages.length - 1].content);
+
+          // Safely access message content with proper null checks
+          if (event.response.messages && event.response.messages.length > 0) {
+            const lastMessage = event.response.messages[event.response.messages.length - 1];
+            console.log('Message content: ', lastMessage?.content);
+          } else {
+            console.log('Message content: No messages available');
+          }
+
           console.log('Response: ', event.response);
           console.log('Provider metadata: ', event.providerMetadata);
           console.log('Sources: ', event.sources);

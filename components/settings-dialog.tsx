@@ -67,7 +67,7 @@ import {
   ContributionGraphTotalCount,
   type Activity,
 } from '@/components/ui/kibo-ui/contribution-graph';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -97,10 +97,10 @@ function ProfileSection({ user, subscriptionData, isProUser, isProStatusLoading 
           <AvatarFallback className={isMobile ? 'text-base' : 'text-lg'}>
             {user?.name
               ? user.name
-                  .split(' ')
-                  .map((n: string) => n[0])
-                  .join('')
-                  .toUpperCase()
+                .split(' ')
+                .map((n: string) => n[0])
+                .join('')
+                .toUpperCase()
               : 'U'}
           </AvatarFallback>
         </Avatar>
@@ -296,19 +296,18 @@ function PreferencesSection({
   const [isSaving, setIsSaving] = useState(false);
 
   const enabled = isCustomInstructionsEnabled ?? true;
-  const setEnabled = setIsCustomInstructionsEnabled ?? (() => {});
+  const setEnabled = setIsCustomInstructionsEnabled ?? (() => { });
 
   const handleSearchProviderChange = (newProvider: 'exa' | 'parallel' | 'tavily' | 'firecrawl') => {
     setSearchProvider(newProvider);
     toast.success(
-      `Search provider changed to ${
-        newProvider === 'exa'
-          ? 'Exa'
-          : newProvider === 'parallel'
-            ? 'Parallel AI'
-            : newProvider === 'tavily'
-              ? 'Tavily'
-              : 'Firecrawl'
+      `Search provider changed to ${newProvider === 'exa'
+        ? 'Exa'
+        : newProvider === 'parallel'
+          ? 'Parallel AI'
+          : newProvider === 'tavily'
+            ? 'Tavily'
+            : 'Firecrawl'
       }`,
     );
   };
@@ -446,7 +445,7 @@ function PreferencesSection({
                       // Keep the focused textarea within the drawer's scroll container without jumping the whole viewport
                       try {
                         e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-                      } catch {}
+                      } catch { }
                     }}
                     disabled={isSaving || !enabled}
                   />
@@ -704,184 +703,180 @@ function UsageSection({ user }: any) {
           </h4>
           <div className={cn('bg-muted/50 dark:bg-card rounded-lg p-3')}>
             {historicalLoading ? (
-              <TooltipProvider>
-                <ContributionGraph
-                  data={loadingStars}
-                  blockSize={isMobile ? 8 : 12}
-                  blockMargin={isMobile ? 3 : 4}
-                  fontSize={isMobile ? 9 : 12}
-                  labels={{
-                    totalCount: 'Loading activity data...',
-                    legend: {
-                      less: 'Less',
-                      more: 'More',
-                    },
-                  }}
-                  className="w-full opacity-60"
+              <ContributionGraph
+                data={loadingStars}
+                blockSize={isMobile ? 8 : 12}
+                blockMargin={isMobile ? 3 : 4}
+                fontSize={isMobile ? 9 : 12}
+                labels={{
+                  totalCount: 'Loading activity data...',
+                  legend: {
+                    less: 'Less',
+                    more: 'More',
+                  },
+                }}
+                className="w-full opacity-60"
+              >
+                <ContributionGraphCalendar
+                  hideMonthLabels={false}
+                  className={cn('text-muted-foreground', isMobile ? 'text-[9px]' : 'text-xs')}
                 >
-                  <ContributionGraphCalendar
-                    hideMonthLabels={false}
-                    className={cn('text-muted-foreground', isMobile ? 'text-[9px]' : 'text-xs')}
-                  >
-                    {({ activity, dayIndex, weekIndex }) => (
-                      <ContributionGraphBlock
-                        key={`${weekIndex}-${dayIndex}-loading`}
-                        activity={activity}
-                        dayIndex={dayIndex}
-                        weekIndex={weekIndex}
-                        className={cn(
-                          'data-[level="0"]:fill-muted/40',
-                          'data-[level="1"]:fill-primary/30',
-                          'data-[level="2"]:fill-primary/50',
-                          'data-[level="3"]:fill-primary/70',
-                          'data-[level="4"]:fill-primary/90',
-                          activity.level > 0 && 'animate-pulse',
-                        )}
-                      />
-                    )}
-                  </ContributionGraphCalendar>
-                  <ContributionGraphFooter
-                    className={cn('pt-2 flex-col sm:flex-row', isMobile ? 'gap-1.5 items-start' : 'gap-2 items-center')}
-                  >
-                    <ContributionGraphTotalCount
-                      className={cn('text-muted-foreground', isMobile ? 'text-[9px] mb-1' : 'text-xs')}
-                    />
-                    <ContributionGraphLegend className={cn('text-muted-foreground', isMobile ? 'flex-shrink-0' : '')}>
-                      {({ level }) => (
-                        <svg height={isMobile ? 8 : 12} width={isMobile ? 8 : 12}>
-                          <rect
-                            className={cn(
-                              'stroke-[1px] stroke-border/50',
-                              'data-[level="0"]:fill-muted/40',
-                              'data-[level="1"]:fill-primary/30',
-                              'data-[level="2"]:fill-primary/50',
-                              'data-[level="3"]:fill-primary/70',
-                              'data-[level="4"]:fill-primary/90',
-                            )}
-                            data-level={level}
-                            height={isMobile ? 8 : 12}
-                            rx={2}
-                            ry={2}
-                            width={isMobile ? 8 : 12}
-                          />
-                        </svg>
+                  {({ activity, dayIndex, weekIndex }) => (
+                    <ContributionGraphBlock
+                      key={`${weekIndex}-${dayIndex}-loading`}
+                      activity={activity}
+                      dayIndex={dayIndex}
+                      weekIndex={weekIndex}
+                      className={cn(
+                        'data-[level="0"]:fill-muted/40',
+                        'data-[level="1"]:fill-primary/30',
+                        'data-[level="2"]:fill-primary/50',
+                        'data-[level="3"]:fill-primary/70',
+                        'data-[level="4"]:fill-primary/90',
+                        activity.level > 0 && 'animate-pulse',
                       )}
-                    </ContributionGraphLegend>
-                  </ContributionGraphFooter>
-                </ContributionGraph>
-              </TooltipProvider>
-            ) : historicalUsageData && historicalUsageData.length > 0 ? (
-              <TooltipProvider>
-                <ContributionGraph
-                  data={historicalUsageData}
-                  blockSize={isMobile ? 8 : 12}
-                  blockMargin={isMobile ? 3 : 4}
-                  fontSize={isMobile ? 9 : 12}
-                  labels={{
-                    totalCount: '{{count}} total messages in {{year}}',
-                    legend: {
-                      less: 'Less',
-                      more: 'More',
-                    },
-                  }}
-                  className="w-full"
-                >
-                  <ContributionGraphCalendar
-                    hideMonthLabels={false}
-                    className={cn('text-muted-foreground', isMobile ? 'text-[9px]' : 'text-xs')}
-                  >
-                    {({ activity, dayIndex, weekIndex }) => (
-                      <Tooltip key={`${weekIndex}-${dayIndex}`}>
-                        <TooltipTrigger asChild>
-                          <g className="cursor-help">
-                            <ContributionGraphBlock
-                              activity={activity}
-                              dayIndex={dayIndex}
-                              weekIndex={weekIndex}
-                              className={cn(
-                                'data-[level="0"]:fill-muted',
-                                'data-[level="1"]:fill-primary/20',
-                                'data-[level="2"]:fill-primary/40',
-                                'data-[level="3"]:fill-primary/60',
-                                'data-[level="4"]:fill-primary',
-                              )}
-                            />
-                          </g>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="text-center">
-                            <p className="font-medium">
-                              {activity.count} {activity.count === 1 ? 'message' : 'messages'}
-                            </p>
-                            <p className="text-xs text-muted">
-                              {new Date(activity.date).toLocaleDateString('en-US', {
-                                weekday: 'long',
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                              })}
-                            </p>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                  </ContributionGraphCalendar>
-                  <ContributionGraphFooter
-                    className={cn('pt-2 flex-col sm:flex-row', isMobile ? 'gap-1.5 items-start' : 'gap-2 items-center')}
-                  >
-                    <ContributionGraphTotalCount
-                      className={cn('text-muted-foreground', isMobile ? 'text-[9px] mb-1' : 'text-xs')}
                     />
-                    <ContributionGraphLegend className={cn('text-muted-foreground', isMobile ? 'flex-shrink-0' : '')}>
-                      {({ level }) => {
-                        const getTooltipText = (level: number) => {
-                          switch (level) {
-                            case 0:
-                              return 'No messages';
-                            case 1:
-                              return '1-3 messages';
-                            case 2:
-                              return '4-7 messages';
-                            case 3:
-                              return '8-12 messages';
-                            case 4:
-                              return '13+ messages';
-                            default:
-                              return `${level} messages`;
-                          }
-                        };
+                  )}
+                </ContributionGraphCalendar>
+                <ContributionGraphFooter
+                  className={cn('pt-2 flex-col sm:flex-row', isMobile ? 'gap-1.5 items-start' : 'gap-2 items-center')}
+                >
+                  <ContributionGraphTotalCount
+                    className={cn('text-muted-foreground', isMobile ? 'text-[9px] mb-1' : 'text-xs')}
+                  />
+                  <ContributionGraphLegend className={cn('text-muted-foreground', isMobile ? 'flex-shrink-0' : '')}>
+                    {({ level }) => (
+                      <svg height={isMobile ? 8 : 12} width={isMobile ? 8 : 12}>
+                        <rect
+                          className={cn(
+                            'stroke-[1px] stroke-border/50',
+                            'data-[level="0"]:fill-muted/40',
+                            'data-[level="1"]:fill-primary/30',
+                            'data-[level="2"]:fill-primary/50',
+                            'data-[level="3"]:fill-primary/70',
+                            'data-[level="4"]:fill-primary/90',
+                          )}
+                          data-level={level}
+                          height={isMobile ? 8 : 12}
+                          rx={2}
+                          ry={2}
+                          width={isMobile ? 8 : 12}
+                        />
+                      </svg>
+                    )}
+                  </ContributionGraphLegend>
+                </ContributionGraphFooter>
+              </ContributionGraph>
+            ) : historicalUsageData && historicalUsageData.length > 0 ? (
+              <ContributionGraph
+                data={historicalUsageData}
+                blockSize={isMobile ? 8 : 12}
+                blockMargin={isMobile ? 3 : 4}
+                fontSize={isMobile ? 9 : 12}
+                labels={{
+                  totalCount: '{{count}} total messages in {{year}}',
+                  legend: {
+                    less: 'Less',
+                    more: 'More',
+                  },
+                }}
+                className="w-full"
+              >
+                <ContributionGraphCalendar
+                  hideMonthLabels={false}
+                  className={cn('text-muted-foreground', isMobile ? 'text-[9px]' : 'text-xs')}
+                >
+                  {({ activity, dayIndex, weekIndex }) => (
+                    <Tooltip key={`${weekIndex}-${dayIndex}`}>
+                      <TooltipTrigger asChild>
+                        <g className="cursor-help">
+                          <ContributionGraphBlock
+                            activity={activity}
+                            dayIndex={dayIndex}
+                            weekIndex={weekIndex}
+                            className={cn(
+                              'data-[level="0"]:fill-muted',
+                              'data-[level="1"]:fill-primary/20',
+                              'data-[level="2"]:fill-primary/40',
+                              'data-[level="3"]:fill-primary/60',
+                              'data-[level="4"]:fill-primary',
+                            )}
+                          />
+                        </g>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="text-center">
+                          <p className="font-medium">
+                            {activity.count} {activity.count === 1 ? 'message' : 'messages'}
+                          </p>
+                          <p className="text-xs text-muted">
+                            {new Date(activity.date).toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            })}
+                          </p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </ContributionGraphCalendar>
+                <ContributionGraphFooter
+                  className={cn('pt-2 flex-col sm:flex-row', isMobile ? 'gap-1.5 items-start' : 'gap-2 items-center')}
+                >
+                  <ContributionGraphTotalCount
+                    className={cn('text-muted-foreground', isMobile ? 'text-[9px] mb-1' : 'text-xs')}
+                  />
+                  <ContributionGraphLegend className={cn('text-muted-foreground', isMobile ? 'flex-shrink-0' : '')}>
+                    {({ level }) => {
+                      const getTooltipText = (level: number) => {
+                        switch (level) {
+                          case 0:
+                            return 'No messages';
+                          case 1:
+                            return '1-3 messages';
+                          case 2:
+                            return '4-7 messages';
+                          case 3:
+                            return '8-12 messages';
+                          case 4:
+                            return '13+ messages';
+                          default:
+                            return `${level} messages`;
+                        }
+                      };
 
-                        return (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <svg height={isMobile ? 8 : 12} width={isMobile ? 8 : 12} className="cursor-help">
-                                <rect
-                                  className={cn(
-                                    'stroke-[1px] stroke-border/50',
-                                    'data-[level="0"]:fill-muted',
-                                    'data-[level="1"]:fill-primary/20',
-                                    'data-[level="2"]:fill-primary/40',
-                                    'data-[level="3"]:fill-primary/60',
-                                    'data-[level="4"]:fill-primary',
-                                  )}
-                                  data-level={level}
-                                  height={isMobile ? 8 : 12}
-                                  rx={2}
-                                  ry={2}
-                                  width={isMobile ? 8 : 12}
-                                />
-                              </svg>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-xs">{getTooltipText(level)}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        );
-                      }}
-                    </ContributionGraphLegend>
-                  </ContributionGraphFooter>
-                </ContributionGraph>
-              </TooltipProvider>
+                      return (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <svg height={isMobile ? 8 : 12} width={isMobile ? 8 : 12} className="cursor-help">
+                              <rect
+                                className={cn(
+                                  'stroke-[1px] stroke-border/50',
+                                  'data-[level="0"]:fill-muted',
+                                  'data-[level="1"]:fill-primary/20',
+                                  'data-[level="2"]:fill-primary/40',
+                                  'data-[level="3"]:fill-primary/60',
+                                  'data-[level="4"]:fill-primary',
+                                )}
+                                data-level={level}
+                                height={isMobile ? 8 : 12}
+                                rx={2}
+                                ry={2}
+                                width={isMobile ? 8 : 12}
+                              />
+                            </svg>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">{getTooltipText(level)}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    }}
+                  </ContributionGraphLegend>
+                </ContributionGraphFooter>
+              </ContributionGraph>
             ) : (
               <div className="h-24 flex items-center justify-center">
                 <p className={cn('text-muted-foreground', isMobile ? 'text-[11px]' : 'text-xs')}>No activity data</p>

@@ -95,10 +95,10 @@ export const PostMessageUpgradeDialog = React.memo(({ open, onOpenChange }: Post
       },
       inr: discountConfig.inrPrice
         ? {
-            finalPrice: inrFinalPrice,
-            originalPrice: inrOriginalPrice,
-            hasDiscount: hasINRDiscount,
-          }
+          finalPrice: inrFinalPrice,
+          originalPrice: inrOriginalPrice,
+          hasDiscount: hasINRDiscount,
+        }
         : null,
     };
   }, [discountConfig]);
@@ -250,9 +250,11 @@ interface LookoutAnnouncementDialogProps {
 export const LookoutAnnouncementDialog = React.memo(({ open, onOpenChange }: LookoutAnnouncementDialogProps) => {
   const router = useRouter();
   const [isMac, setIsMac] = React.useState(false);
+  const [isHydrated, setIsHydrated] = React.useState(false);
 
   React.useEffect(() => {
     setIsMac(navigator.platform.toUpperCase().indexOf('MAC') >= 0);
+    setIsHydrated(true);
   }, []);
 
   React.useEffect(() => {
@@ -350,7 +352,7 @@ export const LookoutAnnouncementDialog = React.memo(({ open, onOpenChange }: Loo
                 <HugeiconsIcon icon={BookOpen01Icon} size={16} color="currentColor" strokeWidth={2} className="mr-2" />
                 Read Blog
                 <span className="sm:ml-auto font-mono text-xs hidden sm:inline opacity-60">
-                  {isMac ? '⌘' : 'Ctrl'} B
+                  {isHydrated ? (isMac ? '⌘' : 'Ctrl') : 'Ctrl'} B
                 </span>
               </Button>
             </div>

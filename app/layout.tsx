@@ -9,6 +9,7 @@ import { Toaster } from 'sonner';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Databuddy } from '@databuddy/sdk';
+import { DevBypassSync } from '@/components/dev-bypass-sync';
 
 import { Providers } from './providers';
 
@@ -113,6 +114,7 @@ export default function RootLayout({
       >
         <NuqsAdapter>
           <Providers>
+            <DevBypassSync />
             <Toaster position="top-center" />
             {children}
           </Providers>

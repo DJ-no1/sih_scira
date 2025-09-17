@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { UserProfile, NavigationMenu } from '@/components/user-profile';
 import { ChatHistoryButton } from '@/components/chat-history-dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { DevBypassToggle } from '@/components/dev-bypass-toggle';
 
 import { ShareButton } from '@/components/share';
 import { cn } from '@/lib/utils';
@@ -71,6 +72,9 @@ const Navbar = memo(
           )}
         >
           <div className={cn('flex items-center gap-3', isDialogOpen ? 'pointer-events-auto' : '')}>
+            {/* Dev Bypass Toggle - Only in development */}
+            <DevBypassToggle />
+
             <Link href="/new">
               <Button
                 type="button"

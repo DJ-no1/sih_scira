@@ -2,8 +2,45 @@ import { useQuery } from '@tanstack/react-query';
 import { getCurrentUser } from '@/app/actions';
 import { type ComprehensiveUserData } from '@/lib/user-data';
 import { shouldBypassRateLimits } from '@/ai/providers';
+import { getDevBypassStatus } from '@/contexts/dev-bypass-context';
+
+// Mock pro user data for dev bypass
+const mockProUserData: ComprehensiveUserData = {
+  id: 'dev-bypass-user',
+  email: 'dev@scira.ai',
+  name: 'Dev Bypass User',
+  emailVerified: true,
+  image: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  isProUser: true,
+  proSource: 'polar', // Use 'polar' as valid enum value
+  subscriptionStatus: 'active',
+  polarSubscription: {
+    id: 'dev-bypass-polar-sub',
+    productId: 'dev-bypass-product',
+    status: 'active',
+    amount: 0,
+    currency: 'USD',
+    recurringInterval: 'month',
+    currentPeriodStart: new Date(),
+    currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+    cancelAtPeriodEnd: false,
+    canceledAt: null,
+  },
+  dodoPayments: {
+    hasPayments: false,
+    expiresAt: null,
+    isExpired: false,
+    isExpiringSoon: false,
+  },
+  paymentHistory: [],
+};
 
 export function useUserData() {
+  // Check for dev bypass
+  const devBypassEnabled = getDevBypassStatus();
+
   const {
     data: userData,
     isLoading,
@@ -17,73 +54,78 @@ export function useUserData() {
     gcTime: 1000 * 60 * 60, // 1 hour cache retention
     refetchOnWindowFocus: false,
     retry: 2,
+    enabled: !devBypassEnabled, // Don't fetch if bypass is enabled
   });
+
+  // Use mock data if dev bypass is enabled
+  const effectiveUserData = devBypassEnabled ? mockProUserData : userData;
+  const effectiveIsLoading = devBypassEnabled ? false : isLoading;
 
   // Helper function to check if user should have unlimited access for specific models
   const shouldBypassLimitsForModel = (selectedModel: string) => {
-    return shouldBypassRateLimits(selectedModel, userData);
+    return shouldBypassRateLimits(selectedModel, effectiveUserData);
   };
 
   return {
     // Core user data
-    user: userData,
-    isLoading,
-    error,
+    user: effectiveUserData,
+    isLoading: effectiveIsLoading,
+    error: devBypassEnabled ? null : error,
     refetch,
-    isRefetching,
+    isRefetching: devBypassEnabled ? false : isRefetching,
 
     // Quick access to commonly used properties
-    isProUser: Boolean(userData?.isProUser),
-    proSource: userData?.proSource || 'none',
-    subscriptionStatus: userData?.subscriptionStatus || 'none',
+    isProUser: Boolean(effectiveUserData?.isProUser),
+    proSource: effectiveUserData?.proSource || 'none',
+    subscriptionStatus: effectiveUserData?.subscriptionStatus || 'none',
 
     // Polar subscription details
-    polarSubscription: userData?.polarSubscription,
-    hasPolarSubscription: Boolean(userData?.polarSubscription),
+    polarSubscription: effectiveUserData?.polarSubscription,
+    hasPolarSubscription: Boolean(effectiveUserData?.polarSubscription),
 
     // DodoPayments details
-    dodoPayments: userData?.dodoPayments,
-    hasDodoPayments: Boolean(userData?.dodoPayments?.hasPayments),
-    dodoExpiresAt: userData?.dodoPayments?.expiresAt,
-    isDodoExpiring: Boolean(userData?.dodoPayments?.isExpiringSoon),
-    isDodoExpired: Boolean(userData?.dodoPayments?.isExpired),
+    dodoPayments: effectiveUserData?.dodoPayments,
+    hasDodoPayments: Boolean(effectiveUserData?.dodoPayments?.hasPayments),
+    dodoExpiresAt: effectiveUserData?.dodoPayments?.expiresAt,
+    isDodoExpiring: Boolean(effectiveUserData?.dodoPayments?.isExpiringSoon),
+    isDodoExpired: Boolean(effectiveUserData?.dodoPayments?.isExpired),
 
     // Payment history
-    paymentHistory: userData?.paymentHistory || [],
+    paymentHistory: effectiveUserData?.paymentHistory || [],
 
-    // Rate limiting helpers
-    shouldCheckLimits: !isLoading && userData && !userData.isProUser,
+    // Rate limiting helpers - always false if dev bypass is enabled
+    shouldCheckLimits: devBypassEnabled ? false : (!effectiveIsLoading && effectiveUserData && !effectiveUserData.isProUser),
     shouldBypassLimitsForModel,
 
     // Subscription status checks
-    hasActiveSubscription: userData?.subscriptionStatus === 'active',
-    isSubscriptionCanceled: userData?.subscriptionStatus === 'canceled',
-    isSubscriptionExpired: userData?.subscriptionStatus === 'expired',
-    hasNoSubscription: userData?.subscriptionStatus === 'none',
+    hasActiveSubscription: effectiveUserData?.subscriptionStatus === 'active',
+    isSubscriptionCanceled: effectiveUserData?.subscriptionStatus === 'canceled',
+    isSubscriptionExpired: effectiveUserData?.subscriptionStatus === 'expired',
+    hasNoSubscription: effectiveUserData?.subscriptionStatus === 'none',
 
     // Legacy compatibility helpers
-    subscriptionData: userData?.polarSubscription
+    subscriptionData: effectiveUserData?.polarSubscription
       ? {
-          hasSubscription: true,
-          subscription: userData.polarSubscription,
-        }
+        hasSubscription: true,
+        subscription: effectiveUserData.polarSubscription,
+      }
       : { hasSubscription: false },
 
     // Map dodoPayments to legacy dodoProStatus structure for settings dialog
-    dodoProStatus: userData?.dodoPayments
+    dodoProStatus: effectiveUserData?.dodoPayments
       ? {
-          isProUser: userData.proSource === 'dodo' && userData.isProUser,
-          hasPayments: userData.dodoPayments.hasPayments,
-          expiresAt: userData.dodoPayments.expiresAt,
-          mostRecentPayment: userData.dodoPayments.mostRecentPayment,
-          daysUntilExpiration: userData.dodoPayments.daysUntilExpiration,
-          isExpired: userData.dodoPayments.isExpired,
-          isExpiringSoon: userData.dodoPayments.isExpiringSoon,
-          source: userData.proSource,
-        }
+        isProUser: effectiveUserData.proSource === 'dodo' && effectiveUserData.isProUser,
+        hasPayments: effectiveUserData.dodoPayments.hasPayments,
+        expiresAt: effectiveUserData.dodoPayments.expiresAt,
+        mostRecentPayment: effectiveUserData.dodoPayments.mostRecentPayment,
+        daysUntilExpiration: effectiveUserData.dodoPayments.daysUntilExpiration,
+        isExpired: effectiveUserData.dodoPayments.isExpired,
+        isExpiringSoon: effectiveUserData.dodoPayments.isExpiringSoon,
+        source: effectiveUserData.proSource,
+      }
       : null,
 
-    expiresAt: userData?.dodoPayments?.expiresAt,
+    expiresAt: effectiveUserData?.dodoPayments?.expiresAt,
   };
 }
 

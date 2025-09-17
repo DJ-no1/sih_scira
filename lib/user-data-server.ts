@@ -77,6 +77,53 @@ export function clearAllUserDataCache(): void {
 
 export async function getComprehensiveUserData(): Promise<ComprehensiveUserData | null> {
   try {
+    // Check for dev bypass first
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        const requestHeaders = await headers();
+        const bypassHeader = requestHeaders.get('x-dev-bypass');
+        if (bypassHeader === 'true') {
+          console.log('🔧 Dev bypass enabled - returning mock pro user data');
+
+          const mockData: ComprehensiveUserData = {
+            id: 'dev-bypass-user',
+            email: 'dev@scira.ai',
+            name: 'Dev Bypass User',
+            emailVerified: true,
+            image: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            isProUser: true,
+            proSource: 'polar',
+            subscriptionStatus: 'active',
+            polarSubscription: {
+              id: 'dev-bypass-polar-sub',
+              productId: 'dev-bypass-product',
+              status: 'active',
+              amount: 0,
+              currency: 'USD',
+              recurringInterval: 'month',
+              currentPeriodStart: new Date(),
+              currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+              cancelAtPeriodEnd: false,
+              canceledAt: null,
+            },
+            dodoPayments: {
+              hasPayments: false,
+              expiresAt: null,
+              isExpired: false,
+              isExpiringSoon: false,
+            },
+            paymentHistory: [],
+          };
+
+          return mockData;
+        }
+      } catch (error) {
+        console.log('Error checking dev bypass header:', error);
+      }
+    }
+
     // Get session once
     const session = await auth.api.getSession({
       headers: await headers(),

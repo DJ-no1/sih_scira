@@ -20,8 +20,16 @@ function getStoredValue<T>(key: string, defaultValue: T): T {
 }
 
 export function useLocalStorage<T>(key: string, defaultValue: T): [T, (value: T | ((val: T) => T)) => void] {
-  // Initialize with the stored value immediately
-  const [storedValue, setStoredValue] = useState<T>(() => getStoredValue(key, defaultValue));
+  // Always start with defaultValue to prevent hydration mismatch
+  const [storedValue, setStoredValue] = useState<T>(defaultValue);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize from localStorage after hydration
+  useEffect(() => {
+    const initialValue = getStoredValue(key, defaultValue);
+    setStoredValue(initialValue);
+    setIsInitialized(true);
+  }, [key, defaultValue]);
 
   // Listen for storage changes from other components/tabs
   useEffect(() => {
@@ -62,8 +70,8 @@ export function useLocalStorage<T>(key: string, defaultValue: T): [T, (value: T 
         const nextValue = value instanceof Function ? value(storedValue) : value;
         // Update React state
         setStoredValue(nextValue);
-        // Update localStorage
-        if (typeof window !== 'undefined') {
+        // Update localStorage only after initialization
+        if (typeof window !== 'undefined' && isInitialized) {
           if (nextValue === undefined) {
             localStorage.removeItem(key);
           } else {
@@ -80,7 +88,7 @@ export function useLocalStorage<T>(key: string, defaultValue: T): [T, (value: T 
         console.warn(`Error saving to localStorage key "${key}":`, error);
       }
     },
-    [key, storedValue],
+    [key, storedValue, isInitialized],
   );
 
   return [storedValue, setValue];

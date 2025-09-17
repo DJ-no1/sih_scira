@@ -4,9 +4,34 @@ import { getSessionCookie } from 'better-auth/cookies';
 const authRoutes = ['/sign-in', '/sign-up'];
 const protectedRoutes = ['/lookout'];
 
+// Check if dev bypass is enabled
+function isDevBypassEnabled(request: NextRequest): boolean {
+  if (process.env.NODE_ENV !== 'development') return false;
+
+  const bypassCookie = request.cookies.get('dev-bypass-enabled');
+  if (bypassCookie) {
+    try {
+      return JSON.parse(bypassCookie.value);
+    } catch {
+      return false;
+    }
+  }
+
+  // Default to true in development mode if no cookie is set
+  return true;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   console.log('Pathname: ', pathname);
+
+  // Check for dev bypass first
+  const devBypassEnabled = isDevBypassEnabled(request);
+  if (devBypassEnabled) {
+    console.log('🔧 Dev bypass enabled - skipping auth checks for:', pathname);
+    return NextResponse.next();
+  }
+
   if (pathname === '/api/search') return NextResponse.next();
   if (pathname.startsWith('/new') || pathname.startsWith('/api/search')) {
     return NextResponse.next();

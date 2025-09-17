@@ -27,7 +27,7 @@ const ProBadge = ({ className = '' }: { className?: string }) => (
   </span>
 );
 import { track } from '@vercel/analytics';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ComprehensiveUserData } from '@/hooks/use-user-data';
 import { useSession } from '@/lib/auth-client';
 import { checkImageModeration, enhancePrompt, getDiscountConfigAction } from '@/app/actions';
@@ -77,6 +77,13 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
     subscriptionData,
     user,
   }) => {
+    const [isHydrated, setIsHydrated] = useState(false);
+
+    // Prevent hydration mismatch by only showing model label after client hydration
+    useEffect(() => {
+      setIsHydrated(true);
+    }, []);
+
     const isProUser = useMemo(
       () =>
         user?.isProUser || (subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active'),
@@ -339,7 +346,9 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
               )}
             >
               <HugeiconsIcon icon={CpuIcon} size={24} color="currentColor" strokeWidth={2} />
-              <span className="text-xs font-medium sm:block hidden">{currentModel?.label || 'Select Model'}</span>
+              <span className="text-xs font-medium sm:block hidden">
+                {isHydrated ? (currentModel?.label || 'Select Model') : 'Select Model'}
+              </span>
               <ChevronsUpDown className="h-4 w-4 opacity-50" />
             </Button>
           </PopoverTrigger>
@@ -527,9 +536,9 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
                         const shouldShowDiscount = isDevMode
                           ? discountConfig.code && discountConfig.message && discountConfig.percentage
                           : discountConfig.enabled &&
-                            discountConfig.code &&
-                            discountConfig.message &&
-                            discountConfig.percentage;
+                          discountConfig.code &&
+                          discountConfig.message &&
+                          discountConfig.percentage;
 
                         if (shouldShowDiscount && discountConfig.showPrice && discountConfig.finalPrice) {
                           return (
@@ -2284,7 +2293,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
   );
 
   const submitForm = useCallback(() => {
-    onSubmit({ preventDefault: () => {}, stopPropagation: () => {} } as React.FormEvent<HTMLFormElement>);
+    onSubmit({ preventDefault: () => { }, stopPropagation: () => { } } as React.FormEvent<HTMLFormElement>);
     resetSuggestedQuestions();
 
     inputRef.current?.focus();
@@ -2357,533 +2366,533 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
   return (
     <div className={cn('flex flex-col w-full max-w-2xl mx-auto')}>
-      <TooltipProvider>
-        <div
-          className={cn(
-            'relative w-full flex flex-col gap-1 rounded-lg transition-all duration-300 font-sans!',
-            hasInteracted ? 'z-50' : 'z-10',
-            isDragging && 'ring-1 ring-border',
-            attachments.length > 0 || uploadQueue.length > 0 ? 'bg-muted/50 p-1' : 'bg-transparent',
-          )}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          <AnimatePresence>
-            {isDragging && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 backdrop-blur-[2px] bg-background/80 rounded-lg border border-dashed border-border flex items-center justify-center z-50 m-2"
-              >
-                <div className="flex items-center gap-4 px-6 py-8">
-                  <div className="p-3 rounded-full bg-muted !shadow-none">
-                    <Upload className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <div className="space-y-1 text-center">
-                    <p className="text-sm font-medium text-foreground">Drop images or PDFs here</p>
-                    <p className="text-xs text-muted-foreground">Max {MAX_FILES} files (5MB per file)</p>
-                  </div>
+
+      <div
+        className={cn(
+          'relative w-full flex flex-col gap-1 rounded-lg transition-all duration-300 font-sans!',
+          hasInteracted ? 'z-50' : 'z-10',
+          isDragging && 'ring-1 ring-border',
+          attachments.length > 0 || uploadQueue.length > 0 ? 'bg-muted/50 p-1' : 'bg-transparent',
+        )}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <AnimatePresence>
+          {isDragging && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 backdrop-blur-[2px] bg-background/80 rounded-lg border border-dashed border-border flex items-center justify-center z-50 m-2"
+            >
+              <div className="flex items-center gap-4 px-6 py-8">
+                <div className="p-3 rounded-full bg-muted !shadow-none">
+                  <Upload className="h-6 w-6 text-muted-foreground" />
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <input
-            type="file"
-            className="hidden"
-            ref={fileInputRef}
-            multiple
-            onChange={handleFileChange}
-            accept={getAcceptedFileTypes(
-              selectedModel,
-              user?.isProUser ||
-                (subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active'),
-            )}
-            tabIndex={-1}
-          />
-          <input
-            type="file"
-            className="hidden"
-            ref={postSubmitFileInputRef}
-            multiple
-            onChange={handleFileChange}
-            accept={getAcceptedFileTypes(
-              selectedModel,
-              user?.isProUser ||
-                (subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active'),
-            )}
-            tabIndex={-1}
-          />
-
-          {(attachments.length > 0 || uploadQueue.length > 0) && (
-            <div className="flex flex-row gap-2 overflow-x-auto py-2 max-h-28 z-10 px-1 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-              {attachments.map((attachment, index) => (
-                <AttachmentPreview
-                  key={attachment.url}
-                  attachment={attachment}
-                  onRemove={() => removeAttachment(index)}
-                  isUploading={false}
-                />
-              ))}
-              {uploadQueue.map((filename) => (
-                <AttachmentPreview
-                  key={filename}
-                  attachment={
-                    {
-                      url: '',
-                      name: filename,
-                      contentType: '',
-                      size: 0,
-                    } as Attachment
-                  }
-                  onRemove={() => {}}
-                  isUploading={true}
-                />
-              ))}
-            </div>
+                <div className="space-y-1 text-center">
+                  <p className="text-sm font-medium text-foreground">Drop images or PDFs here</p>
+                  <p className="text-xs text-muted-foreground">Max {MAX_FILES} files (5MB per file)</p>
+                </div>
+              </div>
+            </motion.div>
           )}
+        </AnimatePresence>
 
-          {/* Form container */}
-          <div className="relative">
+        <input
+          type="file"
+          className="hidden"
+          ref={fileInputRef}
+          multiple
+          onChange={handleFileChange}
+          accept={getAcceptedFileTypes(
+            selectedModel,
+            user?.isProUser ||
+            (subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active'),
+          )}
+          tabIndex={-1}
+        />
+        <input
+          type="file"
+          className="hidden"
+          ref={postSubmitFileInputRef}
+          multiple
+          onChange={handleFileChange}
+          accept={getAcceptedFileTypes(
+            selectedModel,
+            user?.isProUser ||
+            (subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active'),
+          )}
+          tabIndex={-1}
+        />
+
+        {(attachments.length > 0 || uploadQueue.length > 0) && (
+          <div className="flex flex-row gap-2 overflow-x-auto py-2 max-h-28 z-10 px-1 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+            {attachments.map((attachment, index) => (
+              <AttachmentPreview
+                key={attachment.url}
+                attachment={attachment}
+                onRemove={() => removeAttachment(index)}
+                isUploading={false}
+              />
+            ))}
+            {uploadQueue.map((filename) => (
+              <AttachmentPreview
+                key={filename}
+                attachment={
+                  {
+                    url: '',
+                    name: filename,
+                    contentType: '',
+                    size: 0,
+                  } as Attachment
+                }
+                onRemove={() => { }}
+                isUploading={true}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Form container */}
+        <div className="relative">
+          <div
+            className={cn(
+              'rounded-xl !bg-muted border border-border focus-within:border-ring transition-all duration-200',
+              (isEnhancing || isTypewriting) && '!bg-muted',
+            )}
+          >
+            {isRecording ? (
+              <Textarea
+                ref={inputRef}
+                placeholder=""
+                value="◉ Recording..."
+                disabled={true}
+                className={cn(
+                  'w-full rounded-xl rounded-b-none md:text-base!',
+                  'text-base leading-relaxed',
+                  '!bg-muted',
+                  'border-0!',
+                  '!text-muted-foreground',
+                  'focus:ring-0! focus-visible:ring-0!',
+                  'px-4! py-4!',
+                  'touch-manipulation',
+                  'whatsize',
+                  'text-center',
+                  'cursor-not-allowed',
+                  '!shadow-none',
+                )}
+                style={{
+                  WebkitUserSelect: 'text',
+                  WebkitTouchCallout: 'none',
+                  minHeight: undefined,
+                  resize: 'none',
+                }}
+                rows={1}
+              />
+            ) : (
+              <Textarea
+                ref={inputRef}
+                placeholder={
+                  isEnhancing
+                    ? '✨ Enhancing your prompt...'
+                    : isTypewriting
+                      ? '✨ Writing enhanced prompt...'
+                      : hasInteracted
+                        ? 'Ask a new question...'
+                        : 'Ask a question...'
+                }
+                value={input}
+                onChange={handleInput}
+                disabled={isEnhancing || isTypewriting}
+                onInput={(e) => {
+                  // Auto-resize textarea based on content
+                  const target = e.target as HTMLTextAreaElement;
+
+                  // Reset height to auto first to get the actual scroll height
+                  target.style.height = 'auto';
+
+                  const scrollHeight = target.scrollHeight;
+                  const maxHeight = 300; // Increased max height for desktop
+
+                  if (scrollHeight > maxHeight) {
+                    target.style.height = `${maxHeight}px`;
+                    target.style.overflowY = 'auto';
+                  } else {
+                    target.style.height = `${scrollHeight}px`;
+                    target.style.overflowY = 'hidden';
+                  }
+
+                  // Ensure the cursor position is visible by scrolling to bottom if needed
+                  requestAnimationFrame(() => {
+                    const cursorPosition = target.selectionStart;
+                    if (cursorPosition === target.value.length) {
+                      target.scrollTop = target.scrollHeight;
+                    }
+                  });
+                }}
+                className={cn(
+                  'w-full rounded-xl rounded-b-none md:text-base!',
+                  'text-base leading-relaxed',
+                  '!bg-muted',
+                  '!border-0',
+                  'text-foreground',
+                  'focus:!ring-0 focus-visible:!ring-0',
+                  '!px-4 !py-4',
+                  'touch-manipulation',
+                  'whatsize',
+                  '!shadow-none',
+                  'transition-all duration-200',
+                  (isEnhancing || isTypewriting) && 'text-muted-foreground cursor-wait',
+                )}
+                style={{
+                  WebkitUserSelect: 'text',
+                  WebkitTouchCallout: 'none',
+                  minHeight: undefined,
+                  resize: 'none',
+                }}
+                rows={1}
+                autoFocus={!isEnhancing && !isTypewriting}
+                onCompositionStart={() => (isCompositionActive.current = true)}
+                onCompositionEnd={() => (isCompositionActive.current = false)}
+                onKeyDown={isEnhancing || isTypewriting ? undefined : handleKeyDown}
+                onPaste={isEnhancing || isTypewriting ? undefined : handlePaste}
+              />
+            )}
+
+            {/* Toolbar as a separate block - no absolute positioning */}
             <div
               className={cn(
-                'rounded-xl !bg-muted border border-border focus-within:border-ring transition-all duration-200',
-                (isEnhancing || isTypewriting) && '!bg-muted',
+                'flex justify-between items-center rounded-t-none rounded-b-xl',
+                '!bg-muted',
+                '!border-t-0 !border-border',
+                'p-2 gap-2 shadow-none',
+                'transition-all duration-200',
+                (isEnhancing || isTypewriting) && 'pointer-events-none',
+                isRecording && '!bg-muted text-muted-foreground',
               )}
             >
-              {isRecording ? (
-                <Textarea
-                  ref={inputRef}
-                  placeholder=""
-                  value="◉ Recording..."
-                  disabled={true}
-                  className={cn(
-                    'w-full rounded-xl rounded-b-none md:text-base!',
-                    'text-base leading-relaxed',
-                    '!bg-muted',
-                    'border-0!',
-                    '!text-muted-foreground',
-                    'focus:ring-0! focus-visible:ring-0!',
-                    'px-4! py-4!',
-                    'touch-manipulation',
-                    'whatsize',
-                    'text-center',
-                    'cursor-not-allowed',
-                    '!shadow-none',
-                  )}
-                  style={{
-                    WebkitUserSelect: 'text',
-                    WebkitTouchCallout: 'none',
-                    minHeight: undefined,
-                    resize: 'none',
-                  }}
-                  rows={1}
-                />
-              ) : (
-                <Textarea
-                  ref={inputRef}
-                  placeholder={
-                    isEnhancing
-                      ? '✨ Enhancing your prompt...'
-                      : isTypewriting
-                        ? '✨ Writing enhanced prompt...'
-                        : hasInteracted
-                          ? 'Ask a new question...'
-                          : 'Ask a question...'
-                  }
-                  value={input}
-                  onChange={handleInput}
-                  disabled={isEnhancing || isTypewriting}
-                  onInput={(e) => {
-                    // Auto-resize textarea based on content
-                    const target = e.target as HTMLTextAreaElement;
+              <div className={cn('flex items-center gap-2')}>
+                <GroupModeToggle selectedGroup={selectedGroup} onGroupSelect={handleGroupSelect} status={status} />
 
-                    // Reset height to auto first to get the actual scroll height
-                    target.style.height = 'auto';
-
-                    const scrollHeight = target.scrollHeight;
-                    const maxHeight = 300; // Increased max height for desktop
-
-                    if (scrollHeight > maxHeight) {
-                      target.style.height = `${maxHeight}px`;
-                      target.style.overflowY = 'auto';
-                    } else {
-                      target.style.height = `${scrollHeight}px`;
-                      target.style.overflowY = 'hidden';
-                    }
-
-                    // Ensure the cursor position is visible by scrolling to bottom if needed
-                    requestAnimationFrame(() => {
-                      const cursorPosition = target.selectionStart;
-                      if (cursorPosition === target.value.length) {
-                        target.scrollTop = target.scrollHeight;
-                      }
+                <ModelSwitcher
+                  selectedModel={selectedModel}
+                  setSelectedModel={setSelectedModel}
+                  attachments={attachments}
+                  messages={messages}
+                  status={status}
+                  onModelSelect={(model) => {
+                    setSelectedModel(model.value);
+                    const isVisionModel = hasVisionSupport(model.value);
+                    toast.message(`Switched to ${model.label}`, {
+                      description: isVisionModel ? 'You can now upload images to the model.' : undefined,
                     });
                   }}
-                  className={cn(
-                    'w-full rounded-xl rounded-b-none md:text-base!',
-                    'text-base leading-relaxed',
-                    '!bg-muted',
-                    '!border-0',
-                    'text-foreground',
-                    'focus:!ring-0 focus-visible:!ring-0',
-                    '!px-4 !py-4',
-                    'touch-manipulation',
-                    'whatsize',
-                    '!shadow-none',
-                    'transition-all duration-200',
-                    (isEnhancing || isTypewriting) && 'text-muted-foreground cursor-wait',
-                  )}
-                  style={{
-                    WebkitUserSelect: 'text',
-                    WebkitTouchCallout: 'none',
-                    minHeight: undefined,
-                    resize: 'none',
-                  }}
-                  rows={1}
-                  autoFocus={!isEnhancing && !isTypewriting}
-                  onCompositionStart={() => (isCompositionActive.current = true)}
-                  onCompositionEnd={() => (isCompositionActive.current = false)}
-                  onKeyDown={isEnhancing || isTypewriting ? undefined : handleKeyDown}
-                  onPaste={isEnhancing || isTypewriting ? undefined : handlePaste}
+                  subscriptionData={subscriptionData}
+                  user={user}
                 />
-              )}
+              </div>
 
-              {/* Toolbar as a separate block - no absolute positioning */}
-              <div
-                className={cn(
-                  'flex justify-between items-center rounded-t-none rounded-b-xl',
-                  '!bg-muted',
-                  '!border-t-0 !border-border',
-                  'p-2 gap-2 shadow-none',
-                  'transition-all duration-200',
-                  (isEnhancing || isTypewriting) && 'pointer-events-none',
-                  isRecording && '!bg-muted text-muted-foreground',
+              <div className={cn('flex items-center flex-shrink-0 gap-1')}>
+                {hasVisionSupport(selectedModel) && (
+                  <Tooltip delayDuration={300}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="group rounded-full transition-colors duration-200 !size-8 border-0 !shadow-none hover:!bg-primary/30 hover:!border-0"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (!isEnhancing && !isTypewriting) {
+                            triggerFileInput();
+                          }
+                        }}
+                        disabled={isEnhancing || isTypewriting}
+                      >
+                        <span className="block">
+                          <HugeiconsIcon icon={DocumentAttachmentIcon} size={16} />
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      sideOffset={6}
+                      className="border-0 backdrop-blur-xs py-2 px-3 !shadow-none"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium text-[11px]">Attach File</span>
+                        <span className="text-[10px] text-accent leading-tight">
+                          {hasPdfSupport(selectedModel) ? 'Upload an image or PDF document' : 'Upload an image'}
+                        </span>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
-              >
-                <div className={cn('flex items-center gap-2')}>
-                  <GroupModeToggle selectedGroup={selectedGroup} onGroupSelect={handleGroupSelect} status={status} />
 
-                  <ModelSwitcher
-                    selectedModel={selectedModel}
-                    setSelectedModel={setSelectedModel}
-                    attachments={attachments}
-                    messages={messages}
-                    status={status}
-                    onModelSelect={(model) => {
-                      setSelectedModel(model.value);
-                      const isVisionModel = hasVisionSupport(model.value);
-                      toast.message(`Switched to ${model.label}`, {
-                        description: isVisionModel ? 'You can now upload images to the model.' : undefined,
-                      });
-                    }}
-                    subscriptionData={subscriptionData}
-                    user={user}
-                  />
-                </div>
-
-                <div className={cn('flex items-center flex-shrink-0 gap-1')}>
-                  {hasVisionSupport(selectedModel) && (
-                    <Tooltip delayDuration={300}>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="group rounded-full transition-colors duration-200 !size-8 border-0 !shadow-none hover:!bg-primary/30 hover:!border-0"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            if (!isEnhancing && !isTypewriting) {
-                              triggerFileInput();
-                            }
-                          }}
-                          disabled={isEnhancing || isTypewriting}
-                        >
-                          <span className="block">
-                            <HugeiconsIcon icon={DocumentAttachmentIcon} size={16} />
-                          </span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="bottom"
-                        sideOffset={6}
-                        className="border-0 backdrop-blur-xs py-2 px-3 !shadow-none"
+                {/* Show enhance button when there's input */}
+                {(input.length > 0 || isEnhancing || isTypewriting) && (
+                  <Tooltip delayDuration={300}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className={cn(
+                          'group rounded-full transition-colors duration-200 !size-8 border-0 !shadow-none hover:!bg-primary/30 hover:!border-0',
+                          isEnhancementActive && 'bg-primary/10 border-primary/20',
+                        )}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (!isEnhancing && !isTypewriting) {
+                            handleEnhance();
+                          }
+                        }}
+                        disabled={
+                          isEnhancing ||
+                          isTypewriting ||
+                          uploadQueue.length > 0 ||
+                          status !== 'ready' ||
+                          isLimitBlocked
+                        }
                       >
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-medium text-[11px]">Attach File</span>
-                          <span className="text-[10px] text-accent leading-tight">
-                            {hasPdfSupport(selectedModel) ? 'Upload an image or PDF document' : 'Upload an image'}
-                          </span>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-
-                  {/* Show enhance button when there's input */}
-                  {(input.length > 0 || isEnhancing || isTypewriting) && (
-                    <Tooltip delayDuration={300}>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className={cn(
-                            'group rounded-full transition-colors duration-200 !size-8 border-0 !shadow-none hover:!bg-primary/30 hover:!border-0',
-                            isEnhancementActive && 'bg-primary/10 border-primary/20',
+                        <span className="block">
+                          {isEnhancementActive ? (
+                            <GripIcon ref={gripIconRef} size={16} className="text-primary" />
+                          ) : (
+                            <Wand2 className="h-4 w-4" />
                           )}
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            if (!isEnhancing && !isTypewriting) {
-                              handleEnhance();
-                            }
-                          }}
-                          disabled={
-                            isEnhancing ||
-                            isTypewriting ||
-                            uploadQueue.length > 0 ||
-                            status !== 'ready' ||
-                            isLimitBlocked
-                          }
-                        >
-                          <span className="block">
-                            {isEnhancementActive ? (
-                              <GripIcon ref={gripIconRef} size={16} className="text-primary" />
-                            ) : (
-                              <Wand2 className="h-4 w-4" />
-                            )}
-                          </span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="bottom"
-                        sideOffset={6}
-                        className="border-0 backdrop-blur-xs py-2 px-3 !shadow-none"
-                      >
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-medium text-[11px]">
-                            {isEnhancing ? 'Enhancing…' : isTypewriting ? 'Writing…' : 'Enhance Prompt'}
-                          </span>
-                          <span className="text-[10px] text-accent leading-tight">
-                            {isEnhancing
-                              ? 'Using AI to improve your prompt'
-                              : isTypewriting
-                                ? 'Typing enhanced prompt'
-                                : isProUser
-                                  ? 'Enhance your prompt with AI'
-                                  : 'Enhance your prompt with AI (Pro feature)'}
-                          </span>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      sideOffset={6}
+                      className="border-0 backdrop-blur-xs py-2 px-3 !shadow-none"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium text-[11px]">
+                          {isEnhancing ? 'Enhancing…' : isTypewriting ? 'Writing…' : 'Enhance Prompt'}
+                        </span>
+                        <span className="text-[10px] text-accent leading-tight">
+                          {isEnhancing
+                            ? 'Using AI to improve your prompt'
+                            : isTypewriting
+                              ? 'Typing enhanced prompt'
+                              : isProUser
+                                ? 'Enhance your prompt with AI'
+                                : 'Enhance your prompt with AI (Pro feature)'}
+                        </span>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
 
-                  {isProcessing ? (
-                    <Tooltip delayDuration={300}>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="group rounded-full transition-colors duration-200 !size-8"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            if (!isEnhancing && !isTypewriting) {
-                              stop();
-                            }
-                          }}
-                          disabled={isEnhancing || isTypewriting}
-                        >
-                          <span className="block">
-                            <StopIcon size={14} />
-                          </span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="bottom"
-                        sideOffset={6}
-                        className="border-0 backdrop-blur-xs py-2 px-3 !shadow-none"
-                      >
-                        <span className="font-medium text-[11px]">Stop Generation</span>
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : input.length === 0 && attachments.length === 0 && !isEnhancing && !isTypewriting ? (
-                    /* Show Voice Recording Button when no input */
-                    <Tooltip delayDuration={300}>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant={isRecording ? 'destructive' : 'default'}
-                          className={cn('group rounded-full m-auto transition-colors duration-200 !size-8')}
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            if (!isEnhancing && !isTypewriting) {
-                              handleRecord();
-                            }
-                          }}
-                          disabled={isEnhancing || isTypewriting}
-                        >
-                          <span className="block">
-                            <AudioLinesIcon ref={audioLinesRef} size={16} />
-                          </span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="bottom"
-                        sideOffset={6}
-                        className="border-0 backdrop-blur-xs py-2 px-3 !shadow-none"
-                      >
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-medium text-[11px]">
-                            {isRecording ? 'Stop Recording' : 'Voice Input'}
-                          </span>
-                          <span className="text-[10px] text-accent leading-tight">
-                            {isRecording ? 'Click to stop recording' : 'Record your voice message'}
-                          </span>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    /* Show Send Button when there is input */
-                    <Tooltip delayDuration={300}>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="icon"
-                          className="group rounded-full flex m-auto transition-colors duration-200 !size-8"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            if (!isEnhancing && !isTypewriting) {
-                              submitForm();
-                            }
-                          }}
-                          disabled={
-                            (input.length === 0 && attachments.length === 0 && !isEnhancing && !isTypewriting) ||
-                            uploadQueue.length > 0 ||
-                            status !== 'ready' ||
-                            isLimitBlocked ||
-                            isEnhancing ||
-                            isTypewriting
+                {isProcessing ? (
+                  <Tooltip delayDuration={300}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="group rounded-full transition-colors duration-200 !size-8"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (!isEnhancing && !isTypewriting) {
+                            stop();
                           }
-                        >
-                          <span className="block">
-                            <ArrowUpIcon size={16} />
-                          </span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="bottom"
-                        sideOffset={6}
-                        className="border-0 backdrop-blur-xs py-2 px-3 !shadow-none"
+                        }}
+                        disabled={isEnhancing || isTypewriting}
                       >
-                        <span className="font-medium text-[11px]">Send Message</span>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
+                        <span className="block">
+                          <StopIcon size={14} />
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      sideOffset={6}
+                      className="border-0 backdrop-blur-xs py-2 px-3 !shadow-none"
+                    >
+                      <span className="font-medium text-[11px]">Stop Generation</span>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : input.length === 0 && attachments.length === 0 && !isEnhancing && !isTypewriting ? (
+                  /* Show Voice Recording Button when no input */
+                  <Tooltip delayDuration={300}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant={isRecording ? 'destructive' : 'default'}
+                        className={cn('group rounded-full m-auto transition-colors duration-200 !size-8')}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (!isEnhancing && !isTypewriting) {
+                            handleRecord();
+                          }
+                        }}
+                        disabled={isEnhancing || isTypewriting}
+                      >
+                        <span className="block">
+                          <AudioLinesIcon ref={audioLinesRef} size={16} />
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      sideOffset={6}
+                      className="border-0 backdrop-blur-xs py-2 px-3 !shadow-none"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium text-[11px]">
+                          {isRecording ? 'Stop Recording' : 'Voice Input'}
+                        </span>
+                        <span className="text-[10px] text-accent leading-tight">
+                          {isRecording ? 'Click to stop recording' : 'Record your voice message'}
+                        </span>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  /* Show Send Button when there is input */
+                  <Tooltip delayDuration={300}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        className="group rounded-full flex m-auto transition-colors duration-200 !size-8"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (!isEnhancing && !isTypewriting) {
+                            submitForm();
+                          }
+                        }}
+                        disabled={
+                          (input.length === 0 && attachments.length === 0 && !isEnhancing && !isTypewriting) ||
+                          uploadQueue.length > 0 ||
+                          status !== 'ready' ||
+                          isLimitBlocked ||
+                          isEnhancing ||
+                          isTypewriting
+                        }
+                      >
+                        <span className="block">
+                          <ArrowUpIcon size={16} />
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      sideOffset={6}
+                      className="border-0 backdrop-blur-xs py-2 px-3 !shadow-none"
+                    >
+                      <span className="font-medium text-[11px]">Send Message</span>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Pro Upgrade Dialog */}
-        <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
-          <DialogContent className="p-0 overflow-hidden gap-0 bg-background sm:max-w-[450px]" showCloseButton={false}>
-            <DialogHeader className="p-2">
-              <div className="relative w-full p-6 rounded-md text-white overflow-hidden">
-                <div className="absolute inset-0 bg-[url('/placeholder.png')] bg-cover bg-center rounded-sm">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-black/10"></div>
-                </div>
-                <div className="relative z-10 flex flex-col gap-4">
-                  <DialogTitle className="flex items-center gap-3 text-white">
-                    <div className="flex items-center gap-1 flex-wrap">
-                      <span className="text-xl sm:text-2xl font-bold">Unlock</span>
-                      <ProBadge className="!text-white !bg-white/20 !ring-white/30 font-extralight mb-0.5" />
-                    </div>
-                  </DialogTitle>
-                  <DialogDescription className="text-white/90">
-                    <div className="flex items-center gap-2 mb-2">
-                      {pricing.usd.hasDiscount ? (
-                        <>
-                          <span className="text-lg text-white/60 line-through">${pricing.usd.originalPrice}</span>
-                          <span className="text-2xl font-bold">${pricing.usd.finalPrice.toFixed(2)}</span>
-                        </>
-                      ) : (
-                        <span className="text-2xl font-bold">${pricing.usd.finalPrice}</span>
-                      )}
-                      <span className="text-sm text-white/80">/month</span>
-                    </div>
-                    <p className="text-sm text-white/80 text-left">
-                      Get enhanced capabilities including prompt enhancement and unlimited features
-                    </p>
-                  </DialogDescription>
-                  <Button
-                    onClick={() => {
-                      window.location.href = '/pricing';
-                    }}
-                    className="backdrop-blur-md bg-white/90 border border-white/20 text-black hover:bg-white w-full font-medium mt-3"
-                  >
-                    {discountConfig?.buttonText || 'Upgrade to Pro'}
-                  </Button>
-                </div>
+      {/* Pro Upgrade Dialog */}
+      <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
+        <DialogContent className="p-0 overflow-hidden gap-0 bg-background sm:max-w-[450px]" showCloseButton={false}>
+          <DialogHeader className="p-2">
+            <div className="relative w-full p-6 rounded-md text-white overflow-hidden">
+              <div className="absolute inset-0 bg-[url('/placeholder.png')] bg-cover bg-center rounded-sm">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-black/10"></div>
               </div>
-            </DialogHeader>
-
-            <div className="px-6 py-6 flex flex-col gap-4">
-              <div className="flex items-center gap-4">
-                <CheckIcon className="size-4 text-primary flex-shrink-0" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-foreground">Prompt Enhancement</p>
-                  <p className="text-xs text-muted-foreground">AI-powered prompt optimization</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <CheckIcon className="size-4 text-primary flex-shrink-0" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-foreground">Unlimited Searches</p>
-                  <p className="text-xs text-muted-foreground">No daily limits on your research</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <CheckIcon className="size-4 text-primary flex-shrink-0" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-foreground">Advanced AI Models</p>
-                  <p className="text-xs text-muted-foreground">
-                    Access to all AI models including Grok 4, Claude and GPT-5
+              <div className="relative z-10 flex flex-col gap-4">
+                <DialogTitle className="flex items-center gap-3 text-white">
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="text-xl sm:text-2xl font-bold">Unlock</span>
+                    <ProBadge className="!text-white !bg-white/20 !ring-white/30 font-extralight mb-0.5" />
+                  </div>
+                </DialogTitle>
+                <DialogDescription className="text-white/90">
+                  <div className="flex items-center gap-2 mb-2">
+                    {pricing.usd.hasDiscount ? (
+                      <>
+                        <span className="text-lg text-white/60 line-through">${pricing.usd.originalPrice}</span>
+                        <span className="text-2xl font-bold">${pricing.usd.finalPrice.toFixed(2)}</span>
+                      </>
+                    ) : (
+                      <span className="text-2xl font-bold">${pricing.usd.finalPrice}</span>
+                    )}
+                    <span className="text-sm text-white/80">/month</span>
+                  </div>
+                  <p className="text-sm text-white/80 text-left">
+                    Get enhanced capabilities including prompt enhancement and unlimited features
                   </p>
-                </div>
+                </DialogDescription>
+                <Button
+                  onClick={() => {
+                    window.location.href = '/pricing';
+                  }}
+                  className="backdrop-blur-md bg-white/90 border border-white/20 text-black hover:bg-white w-full font-medium mt-3"
+                >
+                  {discountConfig?.buttonText || 'Upgrade to Pro'}
+                </Button>
               </div>
-
-              <div className="flex items-center gap-4">
-                <CheckIcon className="size-4 text-primary flex-shrink-0" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-foreground">Scira Lookout</p>
-                  <p className="text-xs text-muted-foreground">Automated search monitoring on your schedule</p>
-                </div>
-              </div>
-
-              <div className="flex gap-2 w-full items-center mt-4">
-                <div className="flex-1 border-b border-foreground/10" />
-                <p className="text-xs text-foreground/50">Cancel anytime • Secure payment</p>
-                <div className="flex-1 border-b border-foreground/10" />
-              </div>
-
-              <Button
-                variant="ghost"
-                onClick={() => setShowUpgradeDialog(false)}
-                className="w-full text-muted-foreground hover:text-foreground mt-2"
-                size="sm"
-              >
-                Not now
-              </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </TooltipProvider>
+          </DialogHeader>
+
+          <div className="px-6 py-6 flex flex-col gap-4">
+            <div className="flex items-center gap-4">
+              <CheckIcon className="size-4 text-primary flex-shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Prompt Enhancement</p>
+                <p className="text-xs text-muted-foreground">AI-powered prompt optimization</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <CheckIcon className="size-4 text-primary flex-shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Unlimited Searches</p>
+                <p className="text-xs text-muted-foreground">No daily limits on your research</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <CheckIcon className="size-4 text-primary flex-shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Advanced AI Models</p>
+                <p className="text-xs text-muted-foreground">
+                  Access to all AI models including Grok 4, Claude and GPT-5
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <CheckIcon className="size-4 text-primary flex-shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Scira Lookout</p>
+                <p className="text-xs text-muted-foreground">Automated search monitoring on your schedule</p>
+              </div>
+            </div>
+
+            <div className="flex gap-2 w-full items-center mt-4">
+              <div className="flex-1 border-b border-foreground/10" />
+              <p className="text-xs text-foreground/50">Cancel anytime • Secure payment</p>
+              <div className="flex-1 border-b border-foreground/10" />
+            </div>
+
+            <Button
+              variant="ghost"
+              onClick={() => setShowUpgradeDialog(false)}
+              className="w-full text-muted-foreground hover:text-foreground mt-2"
+              size="sm"
+            >
+              Not now
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };

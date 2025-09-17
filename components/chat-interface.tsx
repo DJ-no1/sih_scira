@@ -251,6 +251,18 @@ const ChatInterface = memo(
             },
           };
         },
+        // Add fetch configuration with timeout
+        fetch: (url, init) => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+          
+          return fetch(url, {
+            ...init,
+            signal: controller.signal,
+          }).finally(() => {
+            clearTimeout(timeoutId);
+          });
+        },
       }),
       experimental_throttle: selectedModelRef.current === 'scira-anthropic' ? 500 : 50,
       onData: (dataPart) => {
@@ -310,9 +322,22 @@ const ChatInterface = memo(
           }
         } else {
           console.error('Chat error:', error.cause, error.message);
-          toast.error('An error occurred.', {
-            description: `Oops! An error occurred while processing your request. ${error.cause || error.message}`,
-          });
+          
+          // Handle timeout and connection errors specifically
+          if (error.message?.includes('timeout') || 
+              error.message?.includes('aborted') || 
+              error.message?.includes('Connection timeout') ||
+              error.name === 'AbortError') {
+            console.log('Detected timeout/abort error');
+            toast.error('Connection Timeout', {
+              description: 'Request timed out. Please try again.',
+              duration: 5000,
+            });
+          } else {
+            toast.error('An error occurred.', {
+              description: `Oops! An error occurred while processing your request. ${error.cause || error.message}`,
+            });
+          }
         }
       },
       messages: initialMessages || [],
